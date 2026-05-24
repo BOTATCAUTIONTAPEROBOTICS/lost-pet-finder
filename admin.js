@@ -35,7 +35,8 @@ async function handleLogin(e) {
   btn.textContent = 'Signing in…';
   btn.disabled = true;
 
-  const { data, error } = await getDb().auth.signInWithPassword({ email, password });
+  const captchaToken = document.querySelector('#admin-login-form [name="cf-turnstile-response"]')?.value;
+  const { data, error } = await getDb().auth.signInWithPassword({ email, password, options: { captchaToken } });
 
   btn.textContent = 'Sign In';
   btn.disabled = false;

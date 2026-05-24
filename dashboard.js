@@ -59,7 +59,8 @@ async function sendMagicLink(e) {
   btn.textContent = 'Sending…';
   btn.disabled = true;
 
-  const { error } = await getDb().auth.signInWithOtp({ email });
+  const captchaToken = document.querySelector('#login-form [name="cf-turnstile-response"]')?.value;
+  const { error } = await getDb().auth.signInWithOtp({ email, options: { captchaToken } });
 
   btn.textContent = 'Send Magic Link';
   btn.disabled = false;
