@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Lost Pet — Lost Pet Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="no-print">
+  <h1>Lost Pet Finder</h1>
+  <p class="tagline">Your private owner page</p>
+</header>
+
+<nav class="no-print owner-nav">
+  <a href="index.html">&larr; Back to Home</a>
+  <button id="print-btn" class="btn-nav-action">Print Flyer</button>
+</nav>
+
+<main class="owner-main">
+
+  <!-- Not found state -->
+  <section id="not-found" class="no-print" hidden>
+    <h2>Page not found</h2>
+    <p>This link is invalid or has expired. <a href="index.html">Go back home.</a></p>
+  </section>
+
+  <!-- ── Pet details ───────────────────────────────────── -->
+  <section class="owner-section print-section">
+    <div class="pet-detail-card">
+      <img id="pet-photo-display" src="" alt="Pet photo" class="pet-detail-photo" hidden />
+      <div class="pet-detail-info">
+        <h2 id="pet-name-display"></h2>
+        <p id="pet-type-display" class="pet-type-tag"></p>
+        <p id="pet-desc-display"></p>
+        <p id="pet-reward-display" class="reward-tag" hidden></p>
+        <p id="pet-contact-display" class="contact"></p>
+        <p id="pet-missing-display" class="missing-since"></p>
+      </div>
+    </div>
+
+    <!-- Private link -->
+    <div class="link-box no-print" style="margin-top:1rem">
+      <input type="text" id="owner-link-display" readonly />
+      <button id="copy-link-btn" class="btn-copy">Copy Link</button>
+    </div>
+
+    <!-- Actions -->
+    <div class="owner-actions no-print">
+      <button id="mark-found-btn" class="btn-primary">Mark as Found</button>
+      <button id="edit-toggle" class="btn-outline">Edit Post</button>
+    </div>
+
+    <!-- Found banner -->
+    <div id="found-banner" class="found-banner" hidden>
+      This pet has been marked as found.
+    </div>
+
+    <!-- Thank reporters -->
+    <div id="thank-reporters" class="info-banner" hidden>
+      <strong>Please contact these neighbors to thank them for their sightings:</strong>
+      <pre id="reporters-to-thank"></pre>
+    </div>
+
+    <!-- No sightings reminder -->
+    <div id="no-sightings-reminder" class="reminder-banner no-print" hidden>
+      No sightings after 30 days — try sharing your link with more neighbors.
+    </div>
+  </section>
+
+  <!-- ── Edit form ─────────────────────────────────────── -->
+  <section id="edit-section" class="owner-section no-print" hidden>
+    <h2>Edit Your Post</h2>
+    <form id="edit-form">
+      <div class="form-field">
+        <label for="edit-description">Description</label>
+        <textarea id="edit-description"></textarea>
+      </div>
+      <div class="form-field">
+        <label for="edit-contact">Your Contact</label>
+        <input type="text" id="edit-contact" />
+      </div>
+      <div class="form-field">
+        <label for="edit-reward">Reward <span class="optional">(optional)</span></label>
+        <input type="text" id="edit-reward" placeholder="e.g. $50 reward" />
+      </div>
+      <div id="edit-success" class="success-msg" hidden>Changes saved.</div>
+      <button type="submit">Save Changes</button>
+    </form>
+  </section>
+
+  <!-- ── Map ──────────────────────────────────────────── -->
+  <section class="owner-section">
+    <h2 class="no-print">Sightings Map</h2>
+    <div id="map"></div>
+  </section>
+
+  <!-- ── Sightings feed ───────────────────────────────── -->
+  <section class="owner-section no-print">
+    <h2>Sightings Feed <span class="live-badge">LIVE</span></h2>
+    <div id="sightings-list">
+      <div class="empty-state">Loading…</div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="no-print">
+  <p>Lost Pet Finder &mdash; Helping neighbors help each other.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="config.js"></script>
+<script src="owner.js"></script>
+</body>
+</html>

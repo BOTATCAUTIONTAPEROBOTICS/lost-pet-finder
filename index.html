@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lost Pet Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Lost Pet Finder</h1>
+  <p class="tagline">Helping neighbors reunite pets with their families.</p>
+</header>
+
+<nav>
+  <a href="#" data-target="home"     class="active">Home</a>
+  <a href="#" data-target="post">Post a Lost Pet</a>
+  <a href="#" data-target="sighting">Report a Sighting</a>
+  <a href="#" data-target="mypets">My Pets</a>
+</nav>
+
+<main>
+
+  <!-- ── Home ─────────────────────────────────────────── -->
+  <div class="page" data-page="home">
+
+    <section id="hero">
+      <h2>Is your pet missing?</h2>
+      <p>Post them now so neighbors can help you find them — it takes under 2 minutes.</p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="showPage('post')">Post a Lost Pet</button>
+        <button class="btn-secondary" onclick="showPage('sighting')">Report a Sighting</button>
+      </div>
+    </section>
+
+    <section id="recently-reported">
+      <h2>Recently Reported Lost Pets</h2>
+      <div id="pet-cards-list" class="pet-cards">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </section>
+
+    <section id="what-to-do">
+      <h2>What To Do If Your Pet Is Missing</h2>
+      <ol>
+        <li>Search your immediate block first — check under porches, in bushes, and inside garages.</li>
+        <li>Post your pet on this site so neighbors can see the details right away.</li>
+        <li>Visit or call your nearest animal shelter within 24 hours and give them a photo.</li>
+      </ol>
+    </section>
+
+    <section id="neighbor-tips">
+      <h2>How to Help a Neighbor's Lost Pet</h2>
+      <ul>
+        <li>Do not chase the animal — crouch down and let it approach you so it does not run further away.</li>
+        <li>Take a clear photo and use the Report a Sighting form to alert the owner immediately.</li>
+        <li>Share the lost pet post with anyone who walks or drives through the neighborhood regularly.</li>
+      </ul>
+    </section>
+
+  </div>
+
+  <!-- ── Post a Lost Pet ───────────────────────────────── -->
+  <div class="page" data-page="post" hidden>
+    <section id="post-lost-pet">
+      <h2>Post a Lost Pet</h2>
+
+      <form id="lost-pet-form">
+        <div class="form-field">
+          <label for="pet-name">Pet Name <span class="required">*</span></label>
+          <input type="text" id="pet-name" placeholder="e.g. Mango" required />
+        </div>
+
+        <div class="form-field">
+          <label for="pet-type">Pet Type <span class="required">*</span></label>
+          <select id="pet-type" required>
+            <option value="">Select type…</option>
+            <option value="dog">Dog</option>
+            <option value="cat">Cat</option>
+            <option value="rabbit">Rabbit</option>
+            <option value="bird">Bird</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-field" id="pet-type-other-field" hidden>
+          <label for="pet-type-other">Describe pet type</label>
+          <input type="text" id="pet-type-other" placeholder="e.g. Tortoise, Guinea pig…" />
+        </div>
+
+        <div class="form-field">
+          <label for="pet-description">Description <span class="required">*</span></label>
+          <textarea id="pet-description" placeholder="Color, breed, size, any markings…" required></textarea>
+        </div>
+
+        <div class="form-field">
+          <label for="owner-contact-post">Your Contact <span class="required">*</span></label>
+          <input type="text" id="owner-contact-post" placeholder="Phone or email — shown publicly" required />
+        </div>
+
+        <div class="form-field">
+          <label for="missing-since">Missing Since <span class="required">*</span></label>
+          <input type="datetime-local" id="missing-since" required />
+        </div>
+
+        <div class="advanced-options">
+          <button type="button" id="advanced-toggle" class="advanced-toggle">
+            Advanced Options <span id="chevron" class="chevron">&#9660;</span>
+          </button>
+          <div id="advanced-body" class="advanced-body">
+            <div class="form-field">
+              <label for="pet-photo">Photo <span class="optional">(optional)</span></label>
+              <input type="file" id="pet-photo" accept="image/*" />
+              <img id="photo-preview" src="" alt="Preview" hidden />
+            </div>
+            <div class="form-field">
+              <label for="reward">Reward <span class="optional">(optional)</span></label>
+              <input type="text" id="reward" placeholder="e.g. $50 reward" />
+            </div>
+            <div class="form-field">
+              <label for="last-seen-area">Area Last Seen <span class="optional">(optional)</span></label>
+              <input type="text" id="last-seen-area" placeholder="e.g. Riverside, near the park" />
+            </div>
+            <div class="form-field">
+              <label for="pet-notes">Extra Notes <span class="optional">(optional)</span></label>
+              <textarea id="pet-notes" placeholder="Responds to name, favourite spots, shy around strangers…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div id="post-error" class="error-msg" hidden></div>
+        <button type="submit">Post Lost Pet</button>
+      </form>
+
+      <div id="post-success" class="success-msg" hidden>
+        <strong>Your pet has been posted!</strong> Save your private link below — it is the only way to manage your post.
+        <div class="link-box">
+          <input type="text" id="owner-link-input" readonly />
+          <button id="copy-btn" class="btn-copy">Copy</button>
+        </div>
+        <a id="view-owner-page" href="#" class="btn-card" style="display:inline-block;margin-top:0.5rem" onclick="document.getElementById('view-owner-page').href=document.getElementById('owner-link-input').value">View My Page &rarr;</a>
+      </div>
+    </section>
+  </div>
+
+  <!-- ── Report a Sighting ─────────────────────────────── -->
+  <div class="page" data-page="sighting" hidden>
+    <section id="report-sighting">
+      <h2>Report a Sighting</h2>
+
+      <form id="sighting-form">
+        <div class="form-field">
+          <label for="sighting-pet">Which pet did you see? <span class="required">*</span></label>
+          <select id="sighting-pet" required>
+            <option value="">Loading…</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="sighting-location">Where did you see them? <span class="required">*</span></label>
+          <input type="text" id="sighting-location" placeholder="e.g. Corner of Elm St and Oak Ave" required />
+        </div>
+
+        <div class="form-field">
+          <label for="reporter-name">Your Name <span class="required">*</span></label>
+          <input type="text" id="reporter-name" placeholder="e.g. Sarah" required />
+        </div>
+
+        <div class="form-field">
+          <label for="reporter-contact">Your Contact <span class="required">*</span></label>
+          <input type="text" id="reporter-contact" placeholder="Phone or email" required />
+        </div>
+
+        <div class="advanced-options">
+          <button type="button" id="sighting-advanced-toggle" class="advanced-toggle">
+            Advanced Options <span id="sighting-chevron" class="chevron">&#9660;</span>
+          </button>
+          <div id="sighting-advanced-body" class="advanced-body">
+            <div class="form-field">
+              <label for="sighting-note">Note <span class="optional">(optional)</span></label>
+              <textarea id="sighting-note" placeholder="Which direction they went, how they looked…"></textarea>
+            </div>
+            <div class="form-field">
+              <label for="sighting-photo-input">Photo of the spot <span class="optional">(optional)</span></label>
+              <input type="file" id="sighting-photo-input" accept="image/*" />
+              <img id="sighting-photo-preview" src="" alt="Preview" hidden />
+            </div>
+            <div class="form-field form-field-check">
+              <input type="checkbox" id="has-pet" />
+              <label for="has-pet">I have this pet — the owner should contact me directly</label>
+            </div>
+          </div>
+        </div>
+
+        <div id="sighting-error" class="error-msg" hidden></div>
+        <button type="submit">Submit Sighting</button>
+      </form>
+
+      <div id="sighting-success" class="success-msg" hidden>
+        Thank you! The owner has been notified of your sighting.
+      </div>
+    </section>
+  </div>
+
+  <!-- ── My Pets ───────────────────────────────────────── -->
+  <div class="page" data-page="mypets" hidden>
+    <section>
+      <h2>My Active Posts</h2>
+      <p class="section-hint">Links are saved on this device. Max 3 active posts at once.</p>
+      <div id="my-pets-list"></div>
+    </section>
+  </div>
+
+</main>
+
+<footer>
+  <p>Lost Pet Finder &mdash; Helping neighbors help each other.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
