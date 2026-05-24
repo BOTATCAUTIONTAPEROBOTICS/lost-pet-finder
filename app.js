@@ -130,7 +130,10 @@ async function submitLostPet(e) {
   const expires = new Date();
   expires.setDate(expires.getDate() + 30);
 
+  const { data: { user } } = await getDb().auth.getUser();
+
   const petData = {
+    owner_id:       user?.id ?? null,
     pet_name:       document.getElementById('pet-name').value.trim(),
     pet_type:       petType,
     pet_type_other: petType === 'other' ? document.getElementById('pet-type-other').value.trim() : null,
@@ -315,6 +318,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupPhotoPreview('sighting-photo-input', 'sighting-photo-preview');
   setupAdvancedToggle('advanced-toggle', 'advanced-body', 'chevron');
   setupAdvancedToggle('sighting-advanced-toggle', 'sighting-advanced-body', 'sighting-chevron');
+
+  // Sign in anonymously so RLS allows inserts
+  const { data: { session } } = await getDb().auth.getSession();
+  if (!session) await getDb().auth.signInAnonymously();
 
   await loadActivePets();
 });
