@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Lost Pet Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Lost Pet Finder</h1>
+  <p class="tagline">Admin Panel</p>
+</header>
+
+<nav>
+  <a href="index.html">&larr; Back to Home</a>
+</nav>
+
+<main class="owner-main">
+
+  <!-- ── Login ─────────────────────────────────────────── -->
+  <section id="admin-login" class="owner-section">
+    <h2>Admin Sign In</h2>
+    <form id="admin-login-form">
+      <div class="form-field">
+        <label for="admin-email">Email</label>
+        <input type="email" id="admin-email" required />
+      </div>
+      <div class="form-field">
+        <label for="admin-password">Password</label>
+        <input type="password" id="admin-password" required />
+      </div>
+      <div id="login-error" class="error-msg" hidden></div>
+      <button type="submit">Sign In</button>
+    </form>
+  </section>
+
+  <!-- ── 2FA ───────────────────────────────────────────── -->
+  <section id="admin-2fa" class="owner-section" hidden>
+    <h2>Two-Factor Verification</h2>
+    <p>A verification code has been sent to your email.</p>
+    <form id="admin-2fa-form">
+      <div class="form-field">
+        <label for="otp-code">Verification Code</label>
+        <input type="text" id="otp-code" placeholder="6-digit code" maxlength="6" required />
+      </div>
+      <div id="otp-error" class="error-msg" hidden></div>
+      <button type="submit">Verify</button>
+    </form>
+  </section>
+
+  <!-- ── Admin panel ───────────────────────────────────── -->
+  <section id="admin-panel" class="owner-section" hidden>
+    <div class="admin-header">
+      <h2>Admin Panel</h2>
+      <button id="admin-sign-out" class="btn-outline">Sign Out</button>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="pets-tab">Lost Pets</button>
+      <button class="admin-tab" data-tab="sightings-tab">Sightings</button>
+    </div>
+
+    <!-- Pets tab -->
+    <div id="pets-tab" class="admin-tab-content">
+      <div id="admin-pets-list">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Sightings tab -->
+    <div id="sightings-tab" class="admin-tab-content" hidden>
+      <div id="admin-sightings-list">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Lost Pet Finder &mdash; Helping neighbors help each other.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

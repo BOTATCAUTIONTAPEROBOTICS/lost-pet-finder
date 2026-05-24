@@ -17,10 +17,11 @@
 </header>
 
 <nav>
-  <a href="#" data-target="home"     class="active">Home</a>
+  <a href="#" data-target="home" class="active">Home</a>
   <a href="#" data-target="post">Post a Lost Pet</a>
   <a href="#" data-target="sighting">Report a Sighting</a>
   <a href="#" data-target="mypets">My Pets</a>
+  <a href="dashboard.html">Dashboard</a>
 </nav>
 
 <main>
@@ -137,12 +138,23 @@
       </form>
 
       <div id="post-success" class="success-msg" hidden>
-        <strong>Your pet has been posted!</strong> Save your private link below — it is the only way to manage your post.
+        <strong>Your pet has been posted!</strong> Save your private link — it is the only way to manage your post.
         <div class="link-box">
           <input type="text" id="owner-link-input" readonly />
           <button id="copy-btn" class="btn-copy">Copy</button>
         </div>
-        <a id="view-owner-page" href="#" class="btn-card" style="display:inline-block;margin-top:0.5rem" onclick="document.getElementById('view-owner-page').href=document.getElementById('owner-link-input').value">View My Page &rarr;</a>
+        <a id="view-owner-page" href="#" class="btn-card" style="display:inline-block;margin-top:0.5rem"
+           onclick="document.getElementById('view-owner-page').href=document.getElementById('owner-link-input').value">
+          View My Page &rarr;
+        </a>
+        <div class="email-link-box">
+          <p>Want to access this post from any device? Save your email:</p>
+          <form id="owner-email-form" class="inline-form">
+            <input type="email" id="owner-email-input" placeholder="your@email.com" />
+            <button type="submit">Send link</button>
+          </form>
+          <p id="owner-email-msg" class="hint-msg" hidden></p>
+        </div>
       </div>
     </section>
   </div>
@@ -166,13 +178,13 @@
         </div>
 
         <div class="form-field">
-          <label for="reporter-name">Your Name <span class="required">*</span></label>
-          <input type="text" id="reporter-name" placeholder="e.g. Sarah" required />
+          <label for="reporter-name">Your Name <span class="optional">(optional)</span></label>
+          <input type="text" id="reporter-name" placeholder="e.g. Sarah — leave blank to stay anonymous" />
         </div>
 
         <div class="form-field">
-          <label for="reporter-contact">Your Contact <span class="required">*</span></label>
-          <input type="text" id="reporter-contact" placeholder="Phone or email" required />
+          <label for="reporter-contact">Your Contact <span class="optional">(optional)</span></label>
+          <input type="text" id="reporter-contact" placeholder="Phone or email — only shown to the owner" />
         </div>
 
         <div class="advanced-options">
@@ -201,7 +213,23 @@
       </form>
 
       <div id="sighting-success" class="success-msg" hidden>
-        Thank you! The owner has been notified of your sighting.
+        <strong>Thank you!</strong> Your sighting has been reported. Save your private link to check for replies:
+        <div class="link-box">
+          <input type="text" id="sighting-private-link" readonly />
+          <button id="copy-sighting-btn" class="btn-copy">Copy</button>
+        </div>
+        <a id="view-sighting-page" href="#" class="btn-card" style="display:inline-block;margin-top:0.5rem"
+           onclick="document.getElementById('view-sighting-page').href=document.getElementById('sighting-private-link').value">
+          View Thread &rarr;
+        </a>
+        <div class="email-link-box">
+          <p>Get notified by email when the owner replies:</p>
+          <form id="sighter-email-form" class="inline-form">
+            <input type="email" id="sighter-email-input" placeholder="your@email.com" />
+            <button type="submit">Send link</button>
+          </form>
+          <p id="sighter-email-msg" class="hint-msg" hidden></p>
+        </div>
       </div>
     </section>
   </div>

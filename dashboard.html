@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Lost Pet Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Lost Pet Finder</h1>
+  <p class="tagline">Your Dashboard</p>
+</header>
+
+<nav>
+  <a href="index.html">&larr; Back to Home</a>
+</nav>
+
+<main class="dash-main">
+
+  <!-- ── Not signed in ────────────────────────────────── -->
+  <section id="dash-login" class="dash-section" hidden>
+    <h2>Sign in to your account</h2>
+    <p>Enter your email to receive a magic link — no password needed.</p>
+    <form id="login-form" class="login-form">
+      <div class="form-field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="your@email.com" required />
+      </div>
+      <div id="login-error" class="error-msg" hidden></div>
+      <button type="submit">Send Magic Link</button>
+    </form>
+    <div id="login-sent" class="success-msg" hidden>
+      Check your email and click the link to sign in!
+    </div>
+  </section>
+
+  <!-- ── Dashboard content ────────────────────────────── -->
+  <div id="dash-content" hidden>
+
+    <!-- Unread threads -->
+    <section class="dash-section">
+      <h2>Unread Threads <span id="unread-badge" class="unread-count" hidden></span></h2>
+      <div id="unread-list">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </section>
+
+    <!-- My Lost Pets -->
+    <section class="dash-section">
+      <h2>My Lost Pets</h2>
+      <div id="dash-pets-list">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </section>
+
+    <!-- My Sightings -->
+    <section class="dash-section">
+      <h2>My Sightings</h2>
+      <div id="dash-sightings-list">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </section>
+
+    <!-- Account Settings -->
+    <section class="dash-section">
+      <h2>Account Settings</h2>
+      <div class="account-card">
+        <p>Signed in as: <strong id="account-email">Anonymous session</strong></p>
+        <div id="link-email-section">
+          <p class="section-hint">Link an email to access your account from any device.</p>
+          <form id="link-email-form" class="inline-form">
+            <input type="email" id="link-email-input" placeholder="your@email.com" />
+            <button type="submit">Link Email</button>
+          </form>
+          <p id="link-email-msg" class="hint-msg" hidden></p>
+        </div>
+        <button id="sign-out-btn" class="btn-outline" style="margin-top:1rem">Sign Out</button>
+      </div>
+    </section>
+
+  </div>
+
+</main>
+
+<footer>
+  <p>Lost Pet Finder &mdash; Helping neighbors help each other.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

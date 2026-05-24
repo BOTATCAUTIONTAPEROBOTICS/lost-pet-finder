@@ -23,6 +23,10 @@ function showError(id, msg) {
 
 function clearError(id) { hideEl(id); }
 
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── Home page — pet cards ─────────────────────────────────────────────────────
 
 async function loadActivePets() {
@@ -67,10 +71,6 @@ function renderPetCard(pet) {
         <button class="btn-card btn-card-outline btn-share" data-id="${pet.id}" data-name="${escHtml(pet.pet_name)}">Share</button>
       </div>
     </div>`;
-}
-
-function escHtml(str) {
-  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── My saved pets (localStorage) ─────────────────────────────────────────────
@@ -123,11 +123,10 @@ async function submitLostPet(e) {
   btn.textContent = 'Posting…';
   btn.disabled = true;
 
-  const petType = document.getElementById('pet-type').value;
-  const photoFile = document.getElementById('pet-photo').files[0];
+  const petType    = document.getElementById('pet-type').value;
+  const photoFile  = document.getElementById('pet-photo').files[0];
   const missingVal = document.getElementById('missing-since').value;
-
-  const expires = new Date();
+  const expires    = new Date();
   expires.setDate(expires.getDate() + 30);
 
   const { data: { user } } = await getDb().auth.getUser();
@@ -140,6 +139,7 @@ async function submitLostPet(e) {
     description:    document.getElementById('pet-description').value.trim(),
     owner_contact:  document.getElementById('owner-contact-post').value.trim(),
     reward:         document.getElementById('reward').value.trim() || null,
+    last_seen_area: document.getElementById('last-seen-area')?.value.trim() || null,
     missing_since:  missingVal ? new Date(missingVal).toISOString() : new Date().toISOString(),
     expires_at:     expires.toISOString(),
     photo_url:      photoFile ? await uploadPhoto(photoFile, 'pets') : null,
@@ -171,6 +171,30 @@ function copyOwnerLink() {
   setTimeout(() => setText('copy-btn', 'Copy'), 2000);
 }
 
+// ── Email linking (owner) ─────────────────────────────────────────────────────
+
+async function linkOwnerEmail(e) {
+  e.preventDefault();
+  const email = document.getElementById('owner-email-input').value.trim();
+  if (!email) return;
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.textContent = 'Sending…';
+  btn.disabled = true;
+
+  const { error } = await getDb().auth.updateUser({ email });
+
+  btn.textContent = 'Send link';
+  btn.disabled = false;
+
+  if (error) {
+    setText('owner-email-msg', 'Could not send — check the email address.');
+  } else {
+    setText('owner-email-msg', 'Check your email and click the confirmation link!');
+  }
+  showEl('owner-email-msg');
+}
+
 // ── Report a Sighting ─────────────────────────────────────────────────────────
 
 async function loadPetsDropdown() {
@@ -178,7 +202,11 @@ async function loadPetsDropdown() {
   if (!sel) return;
   sel.innerHTML = '<option value="">Loading…</option>';
 
-  const { data: pets } = await getDb().from('pets').select('id, pet_name, pet_type, pet_type_other').eq('status', 'active').order('created_at', { ascending: false });
+  const { data: pets } = await getDb()
+    .from('pets')
+    .select('id, pet_name, pet_type, pet_type_other')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
 
   if (!pets || pets.length === 0) {
     sel.innerHTML = '<option value="">No lost pets posted yet</option>';
@@ -195,9 +223,9 @@ function preselectPet(id) {
   if (sel) sel.value = id;
 }
 
-async function geocode(location) {
+async function geocode(loc) {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`);
+    const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc)}&format=json&limit=1`);
     const data = await res.json();
     if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
   } catch {}
@@ -216,33 +244,75 @@ async function submitSighting(e) {
   btn.textContent = 'Submitting…';
   btn.disabled = true;
 
-  const location = document.getElementById('sighting-location').value.trim();
-  const coords   = await geocode(location);
-
+  const loc       = document.getElementById('sighting-location').value.trim();
+  const coords    = await geocode(loc);
   const photoFile = document.getElementById('sighting-photo-input')?.files[0];
+
+  const { data: { user } } = await getDb().auth.getUser();
+
+  const anonId = user?.id ? user.id.slice(0, 7).toUpperCase() : Math.random().toString(36).slice(2,9).toUpperCase();
 
   const sightingData = {
     pet_id:           petId,
-    reporter_name:    document.getElementById('reporter-name').value.trim(),
-    reporter_contact: document.getElementById('reporter-contact').value.trim(),
-    location,
-    latitude:  coords?.lat ?? null,
-    longitude: coords?.lng ?? null,
-    note:      document.getElementById('sighting-note').value.trim() || null,
-    has_pet:   document.getElementById('has-pet')?.checked ?? false,
-    photo_url: photoFile ? await uploadPhoto(photoFile, 'sightings') : null,
+    reporter_id:      user?.id ?? null,
+    reporter_name:    document.getElementById('reporter-name').value.trim() || `Anonymous ${anonId}`,
+    reporter_contact: document.getElementById('reporter-contact').value.trim() || null,
+    location:         loc,
+    latitude:         coords?.lat ?? null,
+    longitude:        coords?.lng ?? null,
+    note:             document.getElementById('sighting-note').value.trim() || null,
+    has_pet:          document.getElementById('has-pet')?.checked ?? false,
+    photo_url:        photoFile ? await uploadPhoto(photoFile, 'sightings') : null,
   };
 
-  const { error } = await getDb().from('sightings').insert(sightingData);
+  const { data, error } = await getDb().from('sightings').insert(sightingData).select().single();
 
   btn.textContent = 'Submit Sighting';
   btn.disabled = false;
 
   if (error) { showError('sighting-error', 'Something went wrong — please try again.'); return; }
 
+  // Show private sighting link
+  const sightingLink = `${location.origin}/sighting.html?id=${data.id}`;
+  const linkEl = document.getElementById('sighting-private-link');
+  if (linkEl) linkEl.value = sightingLink;
+
   showEl('sighting-success');
   e.target.reset();
   hideEl('sighting-photo-preview');
+}
+
+function copySightingLink() {
+  const input = document.getElementById('sighting-private-link');
+  if (!input) return;
+  input.select();
+  navigator.clipboard.writeText(input.value).catch(() => document.execCommand('copy'));
+  setText('copy-sighting-btn', 'Copied!');
+  setTimeout(() => setText('copy-sighting-btn', 'Copy'), 2000);
+}
+
+// ── Email linking (sighter) ───────────────────────────────────────────────────
+
+async function linkSighterEmail(e) {
+  e.preventDefault();
+  const email = document.getElementById('sighter-email-input').value.trim();
+  if (!email) return;
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.textContent = 'Sending…';
+  btn.disabled = true;
+
+  const { error } = await getDb().auth.updateUser({ email });
+
+  btn.textContent = 'Send link';
+  btn.disabled = false;
+
+  if (error) {
+    setText('sighter-email-msg', 'Could not send — check the email address.');
+  } else {
+    setText('sighter-email-msg', 'Check your email and click the confirmation link!');
+  }
+  showEl('sighter-email-msg');
 }
 
 // ── Share ─────────────────────────────────────────────────────────────────────
@@ -304,8 +374,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('lost-pet-form')?.addEventListener('submit', submitLostPet);
   document.getElementById('sighting-form')?.addEventListener('submit', submitSighting);
   document.getElementById('copy-btn')?.addEventListener('click', copyOwnerLink);
+  document.getElementById('copy-sighting-btn')?.addEventListener('click', copySightingLink);
+  document.getElementById('owner-email-form')?.addEventListener('submit', linkOwnerEmail);
+  document.getElementById('sighter-email-form')?.addEventListener('submit', linkSighterEmail);
 
-  // Pet type "other" field toggle
   const petTypeSelect = document.getElementById('pet-type');
   const otherField    = document.getElementById('pet-type-other-field');
   if (petTypeSelect && otherField) {
@@ -319,7 +391,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupAdvancedToggle('advanced-toggle', 'advanced-body', 'chevron');
   setupAdvancedToggle('sighting-advanced-toggle', 'sighting-advanced-body', 'sighting-chevron');
 
-  // Sign in anonymously so RLS allows inserts
   const { data: { session } } = await getDb().auth.getSession();
   if (!session) await getDb().auth.signInAnonymously();
 

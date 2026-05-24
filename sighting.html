@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Sighting — Lost Pet Finder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Lost Pet Finder</h1>
+  <p class="tagline">Your private sighting page</p>
+</header>
+
+<nav>
+  <a href="index.html">&larr; Back to Home</a>
+</nav>
+
+<main class="owner-main">
+
+  <section id="not-found" hidden>
+    <h2>Page not found</h2>
+    <p>This link is invalid or has expired. <a href="index.html">Go back home.</a></p>
+  </section>
+
+  <!-- ── Sighting details ──────────────────────────────── -->
+  <section id="sighting-detail" class="owner-section" hidden>
+    <div class="sighting-detail-card">
+      <h2>Your Sighting</h2>
+      <p class="sighting-location"><strong id="detail-location"></strong></p>
+      <p class="sighting-meta">
+        <span id="detail-date"></span> &bull;
+        <span id="detail-reporter"></span>
+      </p>
+      <p id="detail-note" class="sighting-note" hidden></p>
+      <img id="detail-photo" src="" alt="Sighting photo" class="sighting-photo" hidden />
+      <div id="detail-has-pet" class="badge badge-has-pet" hidden>I have this pet!</div>
+
+      <div class="pet-ref-card" id="pet-ref" hidden>
+        <h3>Lost Pet: <span id="ref-pet-name"></span></h3>
+        <p id="ref-pet-type" class="pet-type-tag"></p>
+        <p id="ref-pet-desc"></p>
+        <p id="ref-pet-contact" class="contact"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Chat thread ───────────────────────────────────── -->
+  <section id="thread-section" class="owner-section" hidden>
+    <h2>Thread <span class="live-badge">LIVE</span></h2>
+    <div class="thread-messages" id="thread-messages">
+      <p class="thread-loading">Loading messages…</p>
+    </div>
+    <form id="thread-send-form" class="thread-send-form">
+      <input type="text" id="thread-input" class="thread-input" placeholder="Type a message…" required />
+      <button type="submit" class="btn-send">Send</button>
+    </form>
+  </section>
+
+</main>
+
+<footer>
+  <p>Lost Pet Finder &mdash; Helping neighbors help each other.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="sighting.js"></script>
+</body>
+</html>

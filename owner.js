@@ -8,6 +8,9 @@ let map, clusterGroup, currentPet;
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await getDb().auth.getSession();
+  if (!session) await getDb().auth.signInAnonymously();
+
   const id = new URLSearchParams(location.search).get('id');
   if (!id) { showSection('not-found'); return; }
 
@@ -52,7 +55,6 @@ function renderPet(pet) {
 
   document.getElementById('owner-link-display').value = location.href;
 
-  // Pre-fill edit form
   setVal('edit-description', pet.description);
   setVal('edit-contact',     pet.owner_contact);
   setVal('edit-reward',      pet.reward || '');
@@ -79,7 +81,7 @@ function updateMap(sightings) {
   const pinned = sightings.filter(s => s.latitude && s.longitude && !s.flagged);
   pinned.forEach(s => {
     const marker = L.marker([s.latitude, s.longitude]);
-    marker.bindPopup(`<strong>${s.location}</strong><br>${s.reporter_name}<br>${new Date(s.reported_at).toLocaleString()}`);
+    marker.bindPopup(`<strong>${s.location}</strong><br>${esc(s.reporter_name)}<br>${new Date(s.reported_at).toLocaleString()}`);
     clusterGroup.addLayer(marker);
   });
   if (pinned.length > 0) map.fitBounds(clusterGroup.getBounds().pad(0.3));
@@ -103,21 +105,29 @@ function renderSightings(sightings) {
   list.querySelectorAll('.flag-btn').forEach(btn => {
     btn.addEventListener('click', () => toggleFlag(btn.dataset.id, btn.dataset.flagged === 'true'));
   });
+  list.querySelectorAll('.open-thread-btn').forEach(btn => {
+    btn.addEventListener('click', () => openThread(btn.dataset.id));
+  });
 }
 
 function sightingCard(s) {
   const date = new Date(s.reported_at).toLocaleString();
+  const contact = s.reporter_contact ? ` &bull; ${esc(s.reporter_contact)}` : '';
   return `
-    <div class="sighting-card${s.flagged ? ' sighting-flagged' : ''}${s.has_pet ? ' sighting-has-pet' : ''}">
+    <div class="sighting-card${s.flagged ? ' sighting-flagged' : ''}${s.has_pet ? ' sighting-has-pet' : ''}" id="sc-${s.id}">
       ${s.has_pet ? '<div class="badge badge-has-pet">They have your pet!</div>' : ''}
       ${s.flagged  ? '<div class="badge badge-flagged">Flagged</div>' : ''}
       <p class="sighting-location"><strong>${esc(s.location)}</strong></p>
-      <p class="sighting-meta">${date} &bull; ${esc(s.reporter_name)} &bull; ${esc(s.reporter_contact)}</p>
+      <p class="sighting-meta">${date} &bull; ${esc(s.reporter_name)}${contact}</p>
       ${s.note ? `<p class="sighting-note">${esc(s.note)}</p>` : ''}
       ${s.photo_url ? `<img src="${esc(s.photo_url)}" class="sighting-photo" alt="Sighting photo">` : ''}
-      <button class="flag-btn${s.flagged ? ' flagged' : ''}" data-id="${s.id}" data-flagged="${s.flagged}">
-        ${s.flagged ? 'Unflag' : 'Flag as incorrect'}
-      </button>
+      <div class="sighting-actions">
+        <button class="open-thread-btn btn-card" data-id="${s.id}">Open Thread</button>
+        <button class="flag-btn${s.flagged ? ' flagged' : ''}" data-id="${s.id}" data-flagged="${s.flagged}">
+          ${s.flagged ? 'Unflag' : 'Flag as incorrect'}
+        </button>
+      </div>
+      <div class="thread-box" id="thread-${s.id}" hidden></div>
     </div>`;
 }
 
@@ -126,7 +136,91 @@ async function toggleFlag(id, currently) {
   await loadSightings(currentPet.id);
 }
 
-// ── Real-time ─────────────────────────────────────────────────────────────────
+// ── Thread ────────────────────────────────────────────────────────────────────
+
+let openThreadId = null;
+
+async function openThread(sightingId) {
+  const box = document.getElementById(`thread-${sightingId}`);
+  if (!box) return;
+
+  if (openThreadId && openThreadId !== sightingId) {
+    const prev = document.getElementById(`thread-${openThreadId}`);
+    if (prev) prev.hidden = true;
+  }
+
+  if (!box.hidden) { box.hidden = true; openThreadId = null; return; }
+
+  openThreadId = sightingId;
+  box.hidden = false;
+  box.innerHTML = '<p class="thread-loading">Loading messages…</p>';
+
+  await renderThread(sightingId);
+  subscribeThread(sightingId);
+
+  box.querySelector('.thread-send-form')?.addEventListener('submit', e => sendMessage(e, sightingId, 'owner'));
+}
+
+async function renderThread(sightingId) {
+  const box = document.getElementById(`thread-${sightingId}`);
+  if (!box) return;
+
+  const { data: msgs } = await getDb()
+    .from('messages')
+    .select('*')
+    .eq('sighting_id', sightingId)
+    .order('created_at', { ascending: true });
+
+  const messagesHtml = (msgs || []).length === 0
+    ? '<p class="thread-empty">No messages yet. Send the first one!</p>'
+    : (msgs || []).map(m => `
+        <div class="msg msg-${m.sender_role}">
+          <span class="msg-role">${m.sender_role === 'owner' ? 'You (Owner)' : 'Reporter'}</span>
+          <p class="msg-content">${esc(m.content)}</p>
+          <span class="msg-time">${new Date(m.created_at).toLocaleString()}</span>
+        </div>`).join('');
+
+  box.innerHTML = `
+    <div class="thread-messages" id="msgs-${sightingId}">${messagesHtml}</div>
+    <form class="thread-send-form">
+      <input type="text" class="thread-input" placeholder="Type a message…" required />
+      <button type="submit" class="btn-send">Send</button>
+    </form>`;
+
+  box.querySelector('.thread-send-form')?.addEventListener('submit', e => sendMessage(e, sightingId, 'owner'));
+
+  const msgsEl = box.querySelector('.thread-messages');
+  if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+async function sendMessage(e, sightingId, role) {
+  e.preventDefault();
+  const input = e.target.querySelector('.thread-input');
+  const content = input.value.trim();
+  if (!content) return;
+
+  const { data: { user } } = await getDb().auth.getUser();
+  if (!user) return;
+
+  input.value = '';
+  await getDb().from('messages').insert({
+    sighting_id: sightingId,
+    sender_id:   user.id,
+    sender_role: role,
+    content,
+  });
+}
+
+function subscribeThread(sightingId) {
+  getDb().channel('thread-owner-' + sightingId)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'messages',
+      filter: `sighting_id=eq.${sightingId}`
+    }, () => renderThread(sightingId))
+    .subscribe();
+}
+
+// ── Real-time sightings ───────────────────────────────────────────────────────
 
 function subscribeRealtime(petId) {
   getDb().channel('owner-sightings-' + petId)
@@ -150,7 +244,7 @@ async function markAsFound(petId) {
   document.getElementById('found-banner').hidden = false;
 
   if (reporters?.length > 0) {
-    const list = reporters.map(r => `${r.reporter_name}: ${r.reporter_contact}`).join('\n');
+    const list = reporters.map(r => `${r.reporter_name}${r.reporter_contact ? ': ' + r.reporter_contact : ''}`).join('\n');
     document.getElementById('reporters-to-thank').textContent = list;
     document.getElementById('thank-reporters').hidden = false;
   }
