@@ -232,6 +232,51 @@ async function geocode(loc) {
   return null;
 }
 
+async function reverseGeocode(lat, lng) {
+  try {
+    const res  = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+    const data = await res.json();
+    return data?.display_name || null;
+  } catch {}
+  return null;
+}
+
+// Exact GPS coords captured by the "Here" button; cleared if the user edits the field by hand
+let sightingCoords = null;
+
+function useMyLocation() {
+  const btn    = document.getElementById('use-location-btn');
+  const status = document.getElementById('location-status');
+  const input  = document.getElementById('sighting-location');
+
+  if (!('geolocation' in navigator)) {
+    setText('location-status', 'Location is not supported on this device — please type it instead.');
+    showEl('location-status');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Locating…';
+  setText('location-status', 'Getting your location…');
+  showEl('location-status');
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude, longitude } = pos.coords;
+    sightingCoords = { lat: latitude, lng: longitude };
+
+    const address = await reverseGeocode(latitude, longitude);
+    input.value = address || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+    btn.disabled = false;
+    btn.innerHTML = '📍 Here';
+    setText('location-status', 'Pinned to your current location ✓');
+  }, () => {
+    btn.disabled = false;
+    btn.innerHTML = '📍 Here';
+    setText('location-status', 'Could not get your location — check permissions, or type it instead.');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
 async function submitSighting(e) {
   e.preventDefault();
   clearError('sighting-error');
@@ -245,7 +290,7 @@ async function submitSighting(e) {
   btn.disabled = true;
 
   const loc       = document.getElementById('sighting-location').value.trim();
-  const coords    = await geocode(loc);
+  const coords    = sightingCoords || await geocode(loc);
   const photoFile = document.getElementById('sighting-photo-input')?.files[0];
 
   const { data: { user } } = await getDb().auth.getUser();
@@ -280,6 +325,8 @@ async function submitSighting(e) {
   showEl('sighting-success');
   e.target.reset();
   hideEl('sighting-photo-preview');
+  hideEl('location-status');
+  sightingCoords = null;
 }
 
 function copySightingLink() {
@@ -373,6 +420,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('lost-pet-form')?.addEventListener('submit', submitLostPet);
   document.getElementById('sighting-form')?.addEventListener('submit', submitSighting);
+  document.getElementById('use-location-btn')?.addEventListener('click', useMyLocation);
+  // Typing a location by hand discards the GPS pin so the typed text is geocoded instead
+  document.getElementById('sighting-location')?.addEventListener('input', () => { sightingCoords = null; });
   document.getElementById('copy-btn')?.addEventListener('click', copyOwnerLink);
   document.getElementById('copy-sighting-btn')?.addEventListener('click', copySightingLink);
   document.getElementById('owner-email-form')?.addEventListener('submit', linkOwnerEmail);

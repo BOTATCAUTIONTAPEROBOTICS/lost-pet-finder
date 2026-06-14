@@ -174,7 +174,11 @@
 
         <div class="form-field">
           <label for="sighting-location">Where did you see them? <span class="required">*</span></label>
-          <input type="text" id="sighting-location" placeholder="e.g. Corner of Elm St and Oak Ave" required />
+          <div class="location-input-row">
+            <input type="text" id="sighting-location" placeholder="e.g. Corner of Elm St and Oak Ave" required />
+            <button type="button" id="use-location-btn" class="btn-here">📍 Here</button>
+          </div>
+          <p id="location-status" class="hint-msg" hidden></p>
         </div>
 
         <div class="form-field">

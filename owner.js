@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   checkReminder(pet);
 
   document.getElementById('mark-found-btn')?.addEventListener('click', () => markAsFound(id));
+  document.getElementById('delete-post-btn')?.addEventListener('click', () => deletePost(id));
   document.getElementById('print-btn')?.addEventListener('click', () => window.print());
   document.getElementById('copy-link-btn')?.addEventListener('click', copyLink);
   document.getElementById('edit-form')?.addEventListener('submit', e => saveEdit(e, id));
@@ -67,24 +68,85 @@ function typeLabel(pet) {
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 
+let lastSeenLatLng = null;
+
 function initMap() {
   map = L.map('map').setView([20, 0], 2);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
-  clusterGroup = L.markerClusterGroup();
+
+  L.control.scale({ imperial: true, metric: true }).addTo(map);
+
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = function () {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML =
+      '<span class="leg-dot leg-sighting"></span>Sighting' +
+      '<span class="leg-dot leg-haspet"></span>Has your pet' +
+      '<span class="leg-dot leg-lastseen"></span>Last seen';
+    return div;
+  };
+  legend.addTo(map);
+
+  clusterGroup = L.markerClusterGroup({ showCoverageOnHover: false });
   map.addLayer(clusterGroup);
 }
 
-function updateMap(sightings) {
-  clusterGroup.clearLayers();
-  const pinned = sightings.filter(s => s.latitude && s.longitude && !s.flagged);
-  pinned.forEach(s => {
-    const marker = L.marker([s.latitude, s.longitude]);
-    marker.bindPopup(`<strong>${s.location}</strong><br>${esc(s.reporter_name)}<br>${new Date(s.reported_at).toLocaleString()}`);
-    clusterGroup.addLayer(marker);
+function pinIcon(kind) {
+  return L.divIcon({
+    className: 'map-pin-wrap',
+    html: `<div class="map-pin map-pin-${kind}"></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
   });
-  if (pinned.length > 0) map.fitBounds(clusterGroup.getBounds().pad(0.3));
+}
+
+function sightingPopup(s) {
+  return `
+    <div class="map-popup">
+      ${s.has_pet ? '<span class="map-popup-badge">Has your pet!</span>' : ''}
+      <strong>${esc(s.location)}</strong>
+      <div class="map-popup-meta">${esc(s.reporter_name)} &bull; ${new Date(s.reported_at).toLocaleString()}</div>
+      ${s.note ? `<div class="map-popup-note">${esc(s.note)}</div>` : ''}
+    </div>`;
+}
+
+async function geocodeArea(q) {
+  try {
+    const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+    const data = await res.json();
+    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch {}
+  return null;
+}
+
+async function updateMap(sightings) {
+  clusterGroup.clearLayers();
+
+  sightings
+    .filter(s => s.latitude && s.longitude && !s.flagged)
+    .forEach(s => {
+      const marker = L.marker([s.latitude, s.longitude], { icon: pinIcon(s.has_pet ? 'haspet' : 'sighting') });
+      marker.bindPopup(sightingPopup(s));
+      clusterGroup.addLayer(marker);
+    });
+
+  // Reference marker for the owner's "last seen" area (geocoded once, then cached)
+  if (currentPet?.last_seen_area && !lastSeenLatLng) {
+    lastSeenLatLng = await geocodeArea(currentPet.last_seen_area);
+  }
+  if (lastSeenLatLng) {
+    const m = L.marker([lastSeenLatLng.lat, lastSeenLatLng.lng], { icon: pinIcon('lastseen') });
+    m.bindPopup(`<div class="map-popup"><strong>Last seen area</strong><div class="map-popup-meta">${esc(currentPet.last_seen_area)}</div></div>`);
+    clusterGroup.addLayer(m);
+  }
+
+  if (clusterGroup.getLayers().length > 0) {
+    map.fitBounds(clusterGroup.getBounds().pad(0.3), { maxZoom: 16 });
+  }
 }
 
 // ── Sightings ─────────────────────────────────────────────────────────────────
@@ -248,6 +310,35 @@ async function markAsFound(petId) {
     document.getElementById('reporters-to-thank').textContent = list;
     document.getElementById('thank-reporters').hidden = false;
   }
+}
+
+// ── Delete post ───────────────────────────────────────────────────────────────
+
+async function deletePost(petId) {
+  if (!confirm('Permanently delete this post? This also removes all sightings and messages tied to it. This cannot be undone.')) return;
+
+  const btn = document.getElementById('delete-post-btn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+
+  // .select() returns the deleted rows — empty means RLS blocked it (not the owner)
+  const { data, error } = await getDb().from('pets').delete().eq('id', petId).select();
+
+  if (error || !data || data.length === 0) {
+    btn.disabled = false;
+    btn.textContent = 'Delete Post';
+    alert('Could not delete this post. You can only delete a post from the same device or account it was created on.');
+    return;
+  }
+
+  // Drop it from this device's saved posts, if present
+  try {
+    const mine = JSON.parse(localStorage.getItem('myPets') || '[]').filter(p => p.id !== petId);
+    localStorage.setItem('myPets', JSON.stringify(mine));
+  } catch {}
+
+  alert('Your post has been deleted.');
+  location.href = 'index.html';
 }
 
 // ── Edit pet ──────────────────────────────────────────────────────────────────
