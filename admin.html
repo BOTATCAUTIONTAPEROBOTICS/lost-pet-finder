@@ -25,18 +25,18 @@
   <!-- ── Login ─────────────────────────────────────────── -->
   <section id="admin-login" class="owner-section">
     <h2>Admin Sign In</h2>
+    <p class="section-hint">Enter your admin email and we'll send you a one-time sign-in link.</p>
     <form id="admin-login-form">
       <div class="form-field">
-        <label for="admin-email">Email</label>
+        <label for="admin-email">Admin Email</label>
         <input type="email" id="admin-email" required />
       </div>
-      <div class="form-field">
-        <label for="admin-password">Password</label>
-        <input type="password" id="admin-password" required />
-      </div>
       <div id="login-error" class="error-msg" hidden></div>
-      <button type="submit">Sign In</button>
+      <button type="submit">Send Magic Link</button>
     </form>
+    <div id="login-sent" class="success-msg" hidden>
+      Check your email and click the link to sign in.
+    </div>
   </section>
 
   <!-- ── Admin panel ───────────────────────────────────── -->

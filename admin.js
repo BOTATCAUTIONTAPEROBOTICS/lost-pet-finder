@@ -6,10 +6,10 @@ function getDb() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
+  getDb().auth.onAuthStateChange((event, session) => gateAccess(session));
+
   const { data: { session } } = await getDb().auth.getSession();
-  if (session?.user && isAdmin(session.user)) {
-    showPanel();
-  }
+  gateAccess(session);
 
   document.getElementById('admin-login-form')?.addEventListener('submit', handleLogin);
   document.getElementById('admin-sign-out')?.addEventListener('click', adminSignOut);
@@ -27,32 +27,40 @@ function isAdmin(user) {
   return user?.app_metadata?.is_admin === true || user?.user_metadata?.is_admin === true;
 }
 
+function gateAccess(session) {
+  if (session?.user && isAdmin(session.user)) {
+    showPanel();
+  } else if (session?.user) {
+    // Signed in, but not an admin account.
+    showError('login-error', 'This account is not an admin. Set is_admin in app_metadata, then sign out and use the link again.');
+  }
+}
+
 async function handleLogin(e) {
   e.preventDefault();
-  const email    = document.getElementById('admin-email').value.trim();
-  const password = document.getElementById('admin-password').value;
-  const btn      = e.target.querySelector('button[type="submit"]');
+  const email = document.getElementById('admin-email').value.trim();
+  const btn   = e.target.querySelector('button[type="submit"]');
 
-  btn.textContent = 'Signing in…';
+  btn.textContent = 'Sending…';
   btn.disabled = true;
 
-  const { data, error } = await getDb().auth.signInWithPassword({ email, password });
+  // shouldCreateUser:false → only sends a link if this admin account already exists
+  const { error } = await getDb().auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false, emailRedirectTo: location.origin + '/admin.html' },
+  });
 
-  btn.textContent = 'Sign In';
+  btn.textContent = 'Send Magic Link';
   btn.disabled = false;
 
-  if (error || !data.user) {
-    showError('login-error', 'Invalid email or password.');
+  if (error) {
+    console.error('Admin magic link error:', error);
+    showError('login-error', error.message || 'Could not send link — check the email address.');
     return;
   }
 
-  if (!isAdmin(data.user)) {
-    showError('login-error', 'Access denied.');
-    await getDb().auth.signOut();
-    return;
-  }
-
-  showPanel();
+  document.getElementById('admin-login-form').hidden = true;
+  document.getElementById('login-sent').hidden = false;
 }
 
 async function adminSignOut() {
