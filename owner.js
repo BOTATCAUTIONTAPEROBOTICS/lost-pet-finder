@@ -4,6 +4,7 @@ function getDb() {
 }
 
 let map, clusterGroup, currentPet;
+let allSightings = [];
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -23,8 +24,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadSightings(id);
   subscribeRealtime(id);
   checkReminder(pet);
+  await renderReunionIfFound(id);
 
-  document.getElementById('mark-found-btn')?.addEventListener('click', () => markAsFound(id));
+  document.getElementById('mark-found-btn')?.addEventListener('click', () => openFinderPicker(id));
+  document.getElementById('stolen-toggle')?.addEventListener('click', () => reportStolen(id));
+  document.getElementById('finder-cancel')?.addEventListener('click', closeFinderPicker);
   document.getElementById('delete-post-btn')?.addEventListener('click', () => deletePost(id));
   document.getElementById('print-btn')?.addEventListener('click', () => window.print());
   document.getElementById('copy-link-btn')?.addEventListener('click', copyLink);
@@ -52,6 +56,12 @@ function renderPet(pet) {
     document.getElementById('mark-found-btn').textContent = 'Already marked as found';
     document.getElementById('mark-found-btn').disabled = true;
     document.getElementById('found-banner').hidden = false;
+  }
+
+  if (pet.is_stolen) {
+    document.getElementById('stolen-banner').hidden = false;
+    const sb = document.getElementById('stolen-toggle');
+    if (sb) { sb.disabled = true; sb.textContent = 'Reported stolen — admin tracking'; }
   }
 
   document.getElementById('owner-link-display').value = location.href;
@@ -153,8 +163,9 @@ async function updateMap(sightings) {
 
 async function loadSightings(petId) {
   const { data } = await getDb().from('sightings').select('*').eq('pet_id', petId).order('reported_at', { ascending: false });
-  renderSightings(data || []);
-  updateMap(data || []);
+  allSightings = data || [];
+  renderSightings(allSightings);
+  updateMap(allSightings);
 }
 
 function renderSightings(sightings) {
@@ -198,9 +209,11 @@ async function toggleFlag(id, currently) {
   await loadSightings(currentPet.id);
 }
 
-// ── Thread ────────────────────────────────────────────────────────────────────
+// ── Thread (reusable, photo-capable) ──────────────────────────────────────────
 
 let openThreadId = null;
+const threadBoxes = new Map();
+const subscribedThreads = new Set();
 
 async function openThread(sightingId) {
   const box = document.getElementById(`thread-${sightingId}`);
@@ -214,50 +227,65 @@ async function openThread(sightingId) {
   if (!box.hidden) { box.hidden = true; openThreadId = null; return; }
 
   openThreadId = sightingId;
-  box.hidden = false;
-  box.innerHTML = '<p class="thread-loading">Loading messages…</p>';
-
-  await renderThread(sightingId);
-  subscribeThread(sightingId);
-
-  box.querySelector('.thread-send-form')?.addEventListener('submit', e => sendMessage(e, sightingId, 'owner'));
+  await mountThread(box, sightingId);
 }
 
-async function renderThread(sightingId) {
-  const box = document.getElementById(`thread-${sightingId}`);
-  if (!box) return;
+function msgRowHtml(m) {
+  const who = m.sender_role === 'owner' ? 'You (Owner)' : 'Reporter';
+  return `
+    <div class="msg msg-${m.sender_role}">
+      <span class="msg-role">${who}</span>
+      ${m.content ? `<p class="msg-content">${esc(m.content)}</p>` : ''}
+      ${m.photo_url ? `<a href="${esc(m.photo_url)}" target="_blank" rel="noopener"><img src="${esc(m.photo_url)}" class="msg-photo" alt="Shared photo"></a>` : ''}
+      <span class="msg-time">${new Date(m.created_at).toLocaleString()}</span>
+    </div>`;
+}
 
-  const { data: msgs } = await getDb()
-    .from('messages')
-    .select('*')
-    .eq('sighting_id', sightingId)
-    .order('created_at', { ascending: true });
+async function fetchMessages(sightingId) {
+  const { data } = await getDb().from('messages').select('*').eq('sighting_id', sightingId).order('created_at', { ascending: true });
+  return data || [];
+}
 
-  const messagesHtml = (msgs || []).length === 0
+function messagesHtml(msgs) {
+  return msgs.length === 0
     ? '<p class="thread-empty">No messages yet. Send the first one!</p>'
-    : (msgs || []).map(m => `
-        <div class="msg msg-${m.sender_role}">
-          <span class="msg-role">${m.sender_role === 'owner' ? 'You (Owner)' : 'Reporter'}</span>
-          <p class="msg-content">${esc(m.content)}</p>
-          <span class="msg-time">${new Date(m.created_at).toLocaleString()}</span>
-        </div>`).join('');
+    : msgs.map(msgRowHtml).join('');
+}
 
+async function mountThread(box, sightingId) {
+  box.hidden = false;
+  threadBoxes.set(sightingId, box);
+  box.innerHTML = '<p class="thread-loading">Loading messages…</p>';
+
+  const msgs = await fetchMessages(sightingId);
   box.innerHTML = `
-    <div class="thread-messages" id="msgs-${sightingId}">${messagesHtml}</div>
+    <div class="thread-messages">${messagesHtml(msgs)}</div>
     <form class="thread-send-form">
-      <input type="text" class="thread-input" placeholder="Type a message…" required />
+      <label class="thread-attach" title="Attach a photo">&#128206;<input type="file" accept="image/*" class="thread-photo-input" hidden></label>
+      <input type="text" class="thread-input" placeholder="Type a message…" />
       <button type="submit" class="btn-send">Send</button>
     </form>`;
 
-  box.querySelector('.thread-send-form')?.addEventListener('submit', e => sendMessage(e, sightingId, 'owner'));
-
   const msgsEl = box.querySelector('.thread-messages');
   if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+
+  box.querySelector('.thread-send-form').addEventListener('submit', e => sendThreadMessage(e, sightingId, box));
+  box.querySelector('.thread-photo-input').addEventListener('change', e => sendThreadPhoto(e, sightingId));
+
+  subscribeThreadOnce(sightingId);
 }
 
-async function sendMessage(e, sightingId, role) {
+async function refreshThreadMessages(sightingId) {
+  const box = threadBoxes.get(sightingId);
+  const msgsEl = box?.querySelector('.thread-messages');
+  if (!msgsEl) return;
+  msgsEl.innerHTML = messagesHtml(await fetchMessages(sightingId));
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+async function sendThreadMessage(e, sightingId, box) {
   e.preventDefault();
-  const input = e.target.querySelector('.thread-input');
+  const input = box.querySelector('.thread-input');
   const content = input.value.trim();
   if (!content) return;
 
@@ -265,20 +293,37 @@ async function sendMessage(e, sightingId, role) {
   if (!user) return;
 
   input.value = '';
-  await getDb().from('messages').insert({
-    sighting_id: sightingId,
-    sender_id:   user.id,
-    sender_role: role,
-    content,
-  });
+  await getDb().from('messages').insert({ sighting_id: sightingId, sender_id: user.id, sender_role: 'owner', content });
 }
 
-function subscribeThread(sightingId) {
+async function sendThreadPhoto(e, sightingId) {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file) return;
+
+  const { data: { user } } = await getDb().auth.getUser();
+  if (!user) return;
+
+  const url = await uploadThreadPhoto(file);
+  if (!url) { alert('Could not upload that photo — please try again.'); return; }
+  await getDb().from('messages').insert({ sighting_id: sightingId, sender_id: user.id, sender_role: 'owner', content: '', photo_url: url });
+}
+
+async function uploadThreadPhoto(file) {
+  const path = `thread/${Date.now()}_${file.name}`;
+  const { data, error } = await getDb().storage.from('pet-photos').upload(path, file);
+  if (error) return null;
+  return getDb().storage.from('pet-photos').getPublicUrl(data.path).data.publicUrl;
+}
+
+function subscribeThreadOnce(sightingId) {
+  if (subscribedThreads.has(sightingId)) return;
+  subscribedThreads.add(sightingId);
   getDb().channel('thread-owner-' + sightingId)
     .on('postgres_changes', {
       event: 'INSERT', schema: 'public', table: 'messages',
       filter: `sighting_id=eq.${sightingId}`
-    }, () => renderThread(sightingId))
+    }, () => refreshThreadMessages(sightingId))
     .subscribe();
 }
 
@@ -290,26 +335,177 @@ function subscribeRealtime(petId) {
       event: 'INSERT', schema: 'public', table: 'sightings',
       filter: `pet_id=eq.${petId}`
     }, () => loadSightings(petId))
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'sightings',
+      filter: `pet_id=eq.${petId}`
+    }, () => { loadSightings(petId); renderReunionIfFound(petId); })
     .subscribe();
 }
 
-// ── Mark as found ─────────────────────────────────────────────────────────────
+// ── Mark as found: pick the finder ────────────────────────────────────────────
 
-async function markAsFound(petId) {
-  if (!confirm('Mark this pet as found? The post will be removed from the public list.')) return;
+function openFinderPicker(petId) {
+  const overlay = document.getElementById('finder-picker');
+  const optWrap = document.getElementById('finder-options');
+  if (!overlay || !optWrap) return;
+  setEl('fp-pet-name', currentPet?.pet_name || 'your pet');
 
-  const { data: reporters } = await getDb().from('sightings').select('reporter_name, reporter_contact').eq('pet_id', petId);
-  await getDb().from('pets').update({ status: 'found' }).eq('id', petId);
+  const claimants = allSightings.filter(s => s.has_pet && !s.flagged);
+  const others    = allSightings.filter(s => !s.has_pet && !s.flagged);
 
-  document.getElementById('mark-found-btn').disabled = true;
-  document.getElementById('mark-found-btn').textContent = 'Marked as found';
+  const optionHtml = (s, claim) => `
+    <button class="finder-option${claim ? ' finder-option-claim' : ''}" data-id="${s.id}">
+      ${claim ? '<span class="badge badge-has-pet">Says they have your pet</span>' : ''}
+      <strong>${esc(s.reporter_name)}</strong>${s.reporter_contact ? ' &bull; ' + esc(s.reporter_contact) : ''}
+      <span class="finder-option-loc">${esc(s.location)}</span>
+    </button>`;
+
+  let html = claimants.map(s => optionHtml(s, true)).join('') + others.map(s => optionHtml(s, false)).join('');
+  if (!claimants.length && !others.length) html = '<p class="section-hint">No sightings reported yet.</p>';
+  html += `<button class="finder-option finder-option-none" data-id="">I found them myself (no finder)</button>`;
+  optWrap.innerHTML = html;
+
+  optWrap.querySelectorAll('.finder-option').forEach(b =>
+    b.addEventListener('click', () => confirmFinder(petId, b.dataset.id || null)));
+
+  overlay.hidden = false;
+}
+
+function closeFinderPicker() {
+  const overlay = document.getElementById('finder-picker');
+  if (overlay) overlay.hidden = true;
+}
+
+async function confirmFinder(petId, sightingId) {
+  closeFinderPicker();
+  await getDb().from('pets').update({
+    status: 'found',
+    found_sighting_id: sightingId,
+    found_at: new Date().toISOString(),
+  }).eq('id', petId);
+
+  const btn = document.getElementById('mark-found-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Marked as found'; }
   document.getElementById('found-banner').hidden = false;
 
-  if (reporters?.length > 0) {
-    const list = reporters.map(r => `${r.reporter_name}${r.reporter_contact ? ': ' + r.reporter_contact : ''}`).join('\n');
-    document.getElementById('reporters-to-thank').textContent = list;
-    document.getElementById('thank-reporters').hidden = false;
+  await renderReunionIfFound(petId);
+  document.getElementById('reunion-section')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Report stolen ─────────────────────────────────────────────────────────────
+
+async function reportStolen(petId) {
+  if (currentPet?.is_stolen) return;
+  if (!confirm('Report this pet as STOLEN? This escalates the case: it stays public so neighbors keep reporting sightings, and an admin will track it. Only an admin can stop the tracking.')) return;
+
+  await getDb().from('pets').update({
+    is_stolen: true,
+    stolen_reported_at: new Date().toISOString(),
+    tracking_active: true,
+  }).eq('id', petId);
+
+  if (currentPet) currentPet.is_stolen = true;
+  document.getElementById('stolen-banner').hidden = false;
+  const sb = document.getElementById('stolen-toggle');
+  if (sb) { sb.disabled = true; sb.textContent = 'Reported stolen — admin tracking'; }
+}
+
+// ── Reunion & reward ──────────────────────────────────────────────────────────
+
+function parseAmount(rewardText) {
+  const m = String(rewardText || '').match(/\d+(\.\d{1,2})?/);
+  return m ? m[0] : '';
+}
+
+function paymentLabel(type) {
+  return { venmo: 'Venmo', paypal: 'PayPal', cashapp: 'Cash App', zelle: 'Zelle' }[type] || type;
+}
+
+function paymentLink(type, handle, amount) {
+  const h = encodeURIComponent(String(handle || '').replace(/^[@$]/, ''));
+  const a = amount ? encodeURIComponent(amount) : '';
+  if (type === 'venmo')   return `https://venmo.com/u/${h}${a ? `?txn=pay&amount=${a}` : ''}`;
+  if (type === 'paypal')  return `https://paypal.me/${h}${a ? `/${a}` : ''}`;
+  if (type === 'cashapp') return `https://cash.app/$${h}${a ? `/${a}` : ''}`;
+  return null; // zelle has no universal payment link
+}
+
+async function updatePet(petId, patch) {
+  await getDb().from('pets').update(patch).eq('id', petId);
+  await renderReunionIfFound(petId);
+}
+
+async function renderReunionIfFound(petId) {
+  const { data: pet } = await getDb().from('pets').select('*').eq('id', petId).single();
+  if (!pet) return;
+  currentPet = pet;
+
+  const section = document.getElementById('reunion-section');
+  const body    = document.getElementById('reunion-body');
+  if (!section || !body) return;
+
+  if (pet.status !== 'found') { section.hidden = true; return; }
+  section.hidden = false;
+
+  let finder = null;
+  if (pet.found_sighting_id) {
+    const { data } = await getDb().from('sightings').select('*').eq('id', pet.found_sighting_id).single();
+    finder = data || null;
   }
+
+  if (!finder) {
+    body.innerHTML = '<div class="reunion-card"><p class="reunited-tag">🎉 Marked as found.</p></div>';
+    return;
+  }
+
+  const amount = parseAmount(pet.reward);
+  const pending = '<span class="section-hint">(waiting for finder to confirm)</span>';
+  let h = `<div class="reunion-card">
+    <p>Confirmed finder: <strong>${esc(finder.reporter_name)}</strong>${finder.reporter_contact ? ' &bull; ' + esc(finder.reporter_contact) : ''}</p>`;
+
+  if (!pet.reward_method) {
+    h += `<p class="section-hint">How do you want to give the reward?</p>
+      <div class="reward-method-btns">
+        <button class="btn-outline reward-method" data-method="cash">Cash in person</button>
+        <button class="btn-outline reward-method" data-method="digital">Digital payment</button>
+      </div>`;
+  } else if (pet.reward_method === 'cash') {
+    h += pet.reward_sent
+      ? `<p class="ok-tag">Reward given ✓ ${finder.reward_received ? '&mdash; finder confirmed ✓' : pending}</p>`
+      : `<p>Reward: <strong>${esc(pet.reward || '—')}</strong> in cash at handover.</p>
+         <button class="btn-primary" id="reward-given-btn">Mark reward given</button>`;
+    h += `<p class="reward-change"><button class="link-btn" id="reward-change-btn">Change method</button></p>`;
+  } else {
+    if (!finder.payment_handle) {
+      h += `<p class="section-hint">Waiting for ${esc(finder.reporter_name)} to add their payment info on their page…</p>`;
+    } else {
+      const link = paymentLink(finder.payment_type, finder.payment_handle, amount);
+      h += `<p>Pay <strong>${esc(pet.reward || '')}</strong> via ${esc(paymentLabel(finder.payment_type))} &bull; <strong>${esc(finder.payment_handle)}</strong></p>`;
+      h += link
+        ? `<a href="${esc(link)}" target="_blank" rel="noopener" class="btn-primary">Pay reward &rarr;</a> `
+        : `<p class="section-hint">Open your banking app and send to the handle above.</p>`;
+      h += pet.reward_sent
+        ? `<p class="ok-tag">Marked sent ✓ ${finder.reward_received ? '&mdash; finder confirmed ✓' : pending}</p>`
+        : `<button class="btn-outline" id="reward-sent-btn">I sent it</button>`;
+    }
+    h += `<p class="reward-change"><button class="link-btn" id="reward-change-btn">Change method</button></p>`;
+  }
+
+  h += pet.pet_returned
+    ? '<hr><p class="reunited-tag">🎉 Reunited — pet returned!</p>'
+    : '<hr><button class="btn-primary" id="pet-returned-btn">Pet returned ✓</button>';
+  h += `</div><div class="reunion-thread" id="reunion-thread"></div>`;
+  body.innerHTML = h;
+
+  body.querySelectorAll('.reward-method').forEach(b =>
+    b.addEventListener('click', () => updatePet(petId, { reward_method: b.dataset.method })));
+  document.getElementById('reward-change-btn')?.addEventListener('click', () => updatePet(petId, { reward_method: null, reward_sent: false }));
+  document.getElementById('reward-given-btn')?.addEventListener('click', () => updatePet(petId, { reward_sent: true }));
+  document.getElementById('reward-sent-btn')?.addEventListener('click', () => updatePet(petId, { reward_sent: true }));
+  document.getElementById('pet-returned-btn')?.addEventListener('click', () => updatePet(petId, { pet_returned: true }));
+
+  const threadEl = document.getElementById('reunion-thread');
+  if (threadEl) mountThread(threadEl, finder.id);
 }
 
 // ── Delete post ───────────────────────────────────────────────────────────────

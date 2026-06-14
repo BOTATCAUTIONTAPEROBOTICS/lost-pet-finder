@@ -501,6 +501,84 @@ footer a { color: var(--text-muted); }
 .pet-ref-card { margin-top: 1rem; padding: 1rem; background: var(--blue-light); border-radius: 9px; border-left: 4px solid var(--blue); }
 .pet-ref-card h3 { font-size: 1rem; margin-bottom: 0.4rem; }
 
+/* ── Stolen badge & banner ───────────────────────────── */
+.pet-card { position: relative; }
+.pet-card-stolen { border: 2px solid var(--red); }
+.stolen-badge {
+  position: absolute; top: 0.6rem; right: 0.6rem; z-index: 2;
+  background: var(--red); color: white;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.5px;
+  padding: 0.2rem 0.55rem; border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.stolen-banner {
+  margin-top: 1rem; padding: 0.9rem 1.1rem;
+  background: var(--red-light); color: var(--red);
+  border: 1.5px solid var(--red-border); border-radius: 9px;
+  font-weight: 600;
+}
+
+/* ── Reunion & reward ────────────────────────────────── */
+.reunion-card {
+  background: var(--green-light); border: 1.5px solid var(--green-border);
+  border-radius: 10px; padding: 1.1rem 1.25rem; margin-bottom: 1rem;
+}
+.reunion-card p { margin-bottom: 0.6rem; }
+.reunion-card hr { border: none; border-top: 1px solid var(--green-border); margin: 0.9rem 0; }
+.reward-method-btns { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+.ok-tag { color: var(--green); font-weight: 700; }
+.reunited-tag { color: var(--green); font-weight: 800; font-size: 1.05rem; }
+.reward-change { margin-top: 0.5rem; }
+.link-btn {
+  background: none; border: none; color: var(--blue-dark);
+  font-family: inherit; font-size: 0.85rem; font-weight: 700;
+  cursor: pointer; text-decoration: underline; padding: 0;
+}
+.reunion-thread { margin-top: 0.5rem; }
+.pay-form { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.pay-form select, .pay-form input {
+  padding: 0.5rem 0.6rem; border: 1.5px solid var(--border);
+  border-radius: 7px; font-family: inherit; font-size: 0.9rem;
+}
+.pay-form input { flex: 1; min-width: 160px; }
+
+/* ── Finder picker overlay ───────────────────────────── */
+.finder-picker-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(30,45,58,0.55);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.finder-picker-box {
+  background: var(--white); border-radius: var(--radius);
+  padding: 1.5rem; max-width: 460px; width: 100%;
+  max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow);
+}
+.finder-picker-box h3 { margin-bottom: 0.5rem; }
+#finder-options { display: flex; flex-direction: column; gap: 0.6rem; margin: 1rem 0; }
+.finder-option {
+  text-align: left; background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 9px; padding: 0.75rem 0.9rem; cursor: pointer;
+  font-family: inherit; font-size: 0.95rem; transition: border-color 0.15s, background 0.15s;
+}
+.finder-option:hover { border-color: var(--blue); background: var(--blue-light); }
+.finder-option-claim { border-color: var(--green-border); background: var(--green-light); }
+.finder-option-loc { display: block; color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
+.finder-option-none { text-align: center; font-weight: 700; color: var(--text-muted); }
+
+/* ── Thread photos & attach ──────────────────────────── */
+.thread-attach {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.25rem; cursor: pointer; padding: 0 0.5rem; user-select: none;
+}
+.msg-photo {
+  display: block; max-width: 200px; max-height: 200px;
+  border-radius: 8px; margin-top: 0.35rem;
+}
+
+/* ── Admin tracking status ───────────────────────────── */
+.status-tracking { background: var(--red-light); color: var(--red); }
+.admin-row-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
+
 /* ── Print styles ────────────────────────────────────── */
 @media print {
   .no-print { display: none !important; }

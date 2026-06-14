@@ -20,6 +20,14 @@ create table if not exists pets (
   missing_since   timestamptz  not null default now(),
   expires_at      timestamptz  not null default (now() + interval '30 days'),
   status          text         not null default 'active' check (status in ('active', 'found')),
+  found_sighting_id  uuid,
+  found_at        timestamptz,
+  reward_method   text         check (reward_method is null or reward_method in ('cash', 'digital')),
+  reward_sent     boolean      not null default false,
+  pet_returned    boolean      not null default false,
+  is_stolen       boolean      not null default false,
+  stolen_reported_at timestamptz,
+  tracking_active boolean      not null default false,
   created_at      timestamptz  default now()
 );
 
@@ -38,6 +46,9 @@ create table if not exists sightings (
   note             text,
   has_pet          boolean      default false,
   flagged          boolean      default false,
+  payment_type     text         check (payment_type is null or payment_type in ('venmo', 'paypal', 'cashapp', 'zelle')),
+  payment_handle   text,
+  reward_received  boolean      not null default false,
   reported_at      timestamptz  default now()
 );
 
@@ -48,7 +59,8 @@ create table if not exists messages (
   sighting_id  uuid        references sightings(id) on delete cascade not null,
   sender_id    uuid        not null references auth.users(id),
   sender_role  text        not null check (sender_role in ('owner', 'reporter')),
-  content      text        not null,
+  content      text        not null default '',
+  photo_url    text,
   created_at   timestamptz default now()
 );
 
@@ -127,3 +139,62 @@ create policy "messages_delete" on messages
 alter publication supabase_realtime add table pets;
 alter publication supabase_realtime add table sightings;
 alter publication supabase_realtime add table messages;
+
+-- ============================================================
+-- MIGRATION — run this whole block if your tables ALREADY exist.
+-- (Everything here is safe to run more than once.)
+-- ============================================================
+
+alter table pets      add column if not exists found_sighting_id  uuid;
+alter table pets      add column if not exists found_at           timestamptz;
+alter table pets      add column if not exists reward_method      text;
+alter table pets      add column if not exists reward_sent        boolean not null default false;
+alter table pets      add column if not exists pet_returned       boolean not null default false;
+alter table pets      add column if not exists is_stolen          boolean not null default false;
+alter table pets      add column if not exists stolen_reported_at timestamptz;
+alter table pets      add column if not exists tracking_active    boolean not null default false;
+
+alter table sightings add column if not exists payment_type    text;
+alter table sightings add column if not exists payment_handle  text;
+alter table sightings add column if not exists reward_received boolean not null default false;
+
+alter table messages  add column if not exists photo_url text;
+alter table messages  alter column content set default '';
+
+-- Who is an admin? Read from the SECURE app_metadata claim. Unlike user_metadata,
+-- app_metadata can only be set from the Supabase dashboard / admin API — a normal
+-- user cannot grant themselves admin. Set it on your admin user:
+--   Authentication → Users → (your user) → app_metadata → {"is_admin": true}
+create or replace function public.is_admin() returns boolean
+language sql stable as $$
+  select coalesce(((auth.jwt() -> 'app_metadata' ->> 'is_admin'))::boolean, false);
+$$;
+
+-- Admins can moderate any pet / sighting. (This is also what makes the admin
+-- panel's existing Delete buttons actually work under row-level security.)
+drop policy if exists "pets_admin_update"      on pets;
+create policy "pets_admin_update"      on pets      for update using (public.is_admin());
+drop policy if exists "pets_admin_delete"      on pets;
+create policy "pets_admin_delete"      on pets      for delete using (public.is_admin());
+drop policy if exists "sightings_admin_update" on sightings;
+create policy "sightings_admin_update" on sightings for update using (public.is_admin());
+drop policy if exists "sightings_admin_delete" on sightings;
+create policy "sightings_admin_delete" on sightings for delete using (public.is_admin());
+
+-- Only an admin may STOP tracking a stolen case. An owner may switch tracking ON
+-- (by reporting the pet stolen) but cannot switch it back off.
+create or replace function public.lock_tracking_active() returns trigger
+language plpgsql as $$
+begin
+  if (old.tracking_active is distinct from new.tracking_active)
+     and new.tracking_active = false
+     and not public.is_admin() then
+    new.tracking_active := old.tracking_active;  -- ignore a non-admin trying to stop tracking
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_lock_tracking on pets;
+create trigger trg_lock_tracking before update on pets
+  for each row execute function public.lock_tracking_active();

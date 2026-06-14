@@ -56,12 +56,18 @@
     <div class="owner-actions no-print">
       <button id="mark-found-btn" class="btn-primary">Mark as Found</button>
       <button id="edit-toggle" class="btn-outline">Edit Post</button>
+      <button id="stolen-toggle" class="btn-danger">Report Stolen</button>
       <button id="delete-post-btn" class="btn-danger">Delete Post</button>
     </div>
 
     <!-- Found banner -->
     <div id="found-banner" class="found-banner" hidden>
       This pet has been marked as found.
+    </div>
+
+    <!-- Stolen banner -->
+    <div id="stolen-banner" class="stolen-banner" hidden>
+      &#9888; This pet is reported <strong>STOLEN</strong>. It stays public so neighbors keep reporting sightings, and an admin is tracking the case.
     </div>
 
     <!-- Thank reporters -->
@@ -75,6 +81,22 @@
       No sightings after 30 days — try sharing your link with more neighbors.
     </div>
   </section>
+
+  <!-- ── Reunion & reward (shown once found) ───────────── -->
+  <section id="reunion-section" class="owner-section no-print" hidden>
+    <h2>Reunion &amp; Reward</h2>
+    <div id="reunion-body"></div>
+  </section>
+
+  <!-- ── Finder picker overlay ─────────────────────────── -->
+  <div id="finder-picker" class="finder-picker-overlay no-print" hidden>
+    <div class="finder-picker-box">
+      <h3>Who has <span id="fp-pet-name"></span>?</h3>
+      <p class="section-hint">Pick the person who actually has your pet — we'll keep your chat with them open to arrange pickup and the reward.</p>
+      <div id="finder-options"></div>
+      <button id="finder-cancel" class="btn-outline">Cancel</button>
+    </div>
+  </div>
 
   <!-- ── Edit form ─────────────────────────────────────── -->
   <section id="edit-section" class="owner-section no-print" hidden>

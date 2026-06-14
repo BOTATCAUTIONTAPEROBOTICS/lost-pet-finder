@@ -49,6 +49,12 @@
     </div>
   </section>
 
+  <!-- ── Reunion / reward (finder) ─────────────────────── -->
+  <section id="finder-section" class="owner-section" hidden>
+    <h2 id="finder-heading">You found this pet!</h2>
+    <div id="finder-body"></div>
+  </section>
+
   <!-- ── Chat thread ───────────────────────────────────── -->
   <section id="thread-section" class="owner-section" hidden>
     <h2>Thread <span class="live-badge">LIVE</span></h2>
@@ -56,7 +62,8 @@
       <p class="thread-loading">Loading messages…</p>
     </div>
     <form id="thread-send-form" class="thread-send-form">
-      <input type="text" id="thread-input" class="thread-input" placeholder="Type a message…" required />
+      <label class="thread-attach" title="Attach a photo">&#128206;<input type="file" id="thread-photo-input" accept="image/*" hidden></label>
+      <input type="text" id="thread-input" class="thread-input" placeholder="Type a message…" />
       <button type="submit" class="btn-send">Send</button>
     </form>
   </section>

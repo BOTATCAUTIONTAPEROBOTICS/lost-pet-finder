@@ -22,7 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 function isAdmin(user) {
-  return user?.user_metadata?.is_admin === true;
+  // Authority is enforced server-side by RLS using the secure app_metadata claim.
+  // We accept either here just to decide whether to show the panel UI.
+  return user?.app_metadata?.is_admin === true || user?.user_metadata?.is_admin === true;
 }
 
 async function handleLogin(e) {
@@ -73,6 +75,7 @@ function switchTab(tabId) {
   document.getElementById(tabId).hidden = false;
 
   if (tabId === 'sightings-tab') loadAdminSightings();
+  if (tabId === 'stolen-tab')    loadAdminStolen();
 }
 
 // ── Pets ──────────────────────────────────────────────────────────────────────
@@ -137,6 +140,58 @@ async function deleteSighting(id) {
   if (!confirm('Delete this sighting permanently?')) return;
   await getDb().from('sightings').delete().eq('id', id);
   await loadAdminSightings();
+}
+
+// ── Stolen / Tracking ─────────────────────────────────────────────────────────
+
+async function loadAdminStolen() {
+  const { data: pets } = await getDb()
+    .from('pets')
+    .select('*')
+    .eq('is_stolen', true)
+    .order('stolen_reported_at', { ascending: false });
+
+  const container = document.getElementById('admin-stolen-list');
+  if (!pets || pets.length === 0) {
+    container.innerHTML = '<div class="empty-state">No pets reported stolen.</div>';
+    return;
+  }
+
+  container.innerHTML = pets.map(p => {
+    const reported = p.stolen_reported_at ? new Date(p.stolen_reported_at).toLocaleDateString() : '—';
+    const tracking = p.tracking_active;
+    return `
+    <div class="admin-row">
+      <div class="admin-row-info">
+        <strong>${escHtml(p.pet_name)}</strong>
+        <span class="status-tag ${tracking ? 'status-tracking' : 'status-found'}">${tracking ? 'Tracking' : 'Tracking off'}</span>
+        <span class="date-tag">Reported ${reported}</span>
+        <span>${escHtml(p.owner_contact)}</span>
+      </div>
+      <div class="admin-row-actions">
+        <a class="btn-card btn-card-outline" href="owner.html?id=${p.id}" target="_blank" rel="noopener">View case</a>
+        <button class="${tracking ? 'btn-danger' : 'btn-card'}" onclick="toggleTracking('${p.id}', ${tracking})">
+          ${tracking ? 'Stop tracking' : 'Re-open tracking'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleTracking(id, currentlyTracking) {
+  const verb = currentlyTracking ? 'Stop tracking' : 'Re-open tracking';
+  if (!confirm(`${verb} this stolen case?`)) return;
+
+  const { data, error } = await getDb()
+    .from('pets')
+    .update({ tracking_active: !currentlyTracking })
+    .eq('id', id)
+    .select();
+
+  if (error || !data || data.length === 0 || data[0].tracking_active === currentlyTracking) {
+    alert('Could not change tracking. Make sure your admin account has is_admin set in app_metadata.');
+  }
+  await loadAdminStolen();
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

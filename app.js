@@ -58,7 +58,8 @@ function renderPetCard(pet) {
   const type = petTypeLabel(pet.pet_type, pet.pet_type_other);
   const missingDate = new Date(pet.missing_since).toLocaleDateString();
   return `
-    <div class="pet-card">
+    <div class="pet-card${pet.is_stolen ? ' pet-card-stolen' : ''}">
+      ${pet.is_stolen ? '<span class="stolen-badge">STOLEN</span>' : ''}
       ${pet.photo_url ? `<img src="${escHtml(pet.photo_url)}" alt="${escHtml(pet.pet_name)}" class="pet-card-photo">` : ''}
       <h3>${escHtml(pet.pet_name)}</h3>
       <p class="pet-type-tag">${escHtml(type)}</p>

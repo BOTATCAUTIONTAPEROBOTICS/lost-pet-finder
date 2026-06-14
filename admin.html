@@ -49,6 +49,7 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="pets-tab">Lost Pets</button>
       <button class="admin-tab" data-tab="sightings-tab">Sightings</button>
+      <button class="admin-tab" data-tab="stolen-tab">Stolen / Tracking</button>
     </div>
 
     <!-- Pets tab -->
@@ -61,6 +62,13 @@
     <!-- Sightings tab -->
     <div id="sightings-tab" class="admin-tab-content" hidden>
       <div id="admin-sightings-list">
+        <div class="empty-state">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Stolen / Tracking tab -->
+    <div id="stolen-tab" class="admin-tab-content" hidden>
+      <div id="admin-stolen-list">
         <div class="empty-state">Loading…</div>
       </div>
     </div>
