@@ -27,7 +27,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('login-form')?.addEventListener('submit', sendMagicLink);
   document.getElementById('link-email-form')?.addEventListener('submit', linkEmail);
+  document.getElementById('dash-login-form')?.addEventListener('submit', loginExisting);
   document.getElementById('sign-out-btn')?.addEventListener('click', signOut);
+
+  document.querySelectorAll('.email-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchEmailMode(btn.dataset.mode));
+  });
 });
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -85,8 +90,36 @@ async function linkEmail(e) {
   btn.textContent = 'Link Email';
   btn.disabled = false;
 
+  if (error) console.error('Link email error:', error);
   const msg = document.getElementById('link-email-msg');
-  msg.textContent = error ? 'Could not send — check the email address.' : 'Check your email and click the confirmation link!';
+  msg.textContent = error ? (error.message || 'Could not send — check the email address.') : 'Check your email and click the confirmation link!';
+  msg.hidden = false;
+}
+
+function switchEmailMode(mode) {
+  document.querySelectorAll('.email-tab').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('email-mode-new').hidden      = mode !== 'new';
+  document.getElementById('email-mode-existing').hidden = mode !== 'existing';
+}
+
+async function loginExisting(e) {
+  e.preventDefault();
+  const email = document.getElementById('dash-login-input').value.trim();
+  const btn   = e.target.querySelector('button[type="submit"]');
+  btn.textContent = 'Sending…';
+  btn.disabled = true;
+
+  // shouldCreateUser:false → only sends a link if the account already exists
+  const { error } = await getDb().auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+
+  btn.textContent = 'Send Magic Link';
+  btn.disabled = false;
+
+  if (error) console.error('Existing-account login error:', error);
+  const msg = document.getElementById('dash-login-msg');
+  msg.textContent = error
+    ? (error.message || 'Could not send link — check the email address.')
+    : 'Check your email and click the link to sign in!';
   msg.hidden = false;
 }
 

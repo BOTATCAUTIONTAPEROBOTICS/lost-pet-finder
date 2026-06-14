@@ -439,6 +439,10 @@ footer a { color: var(--text-muted); }
 
 .hint-msg { font-size: 0.85rem; color: var(--green); font-weight: 600; margin-top: 0.4rem; }
 
+.email-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.email-tab { padding: 0.4rem 1rem; border: 2px solid var(--border); border-radius: 8px; background: var(--bg); font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; color: var(--text-muted); }
+.email-tab.active { background: var(--blue); color: white; border-color: var(--blue); }
+
 .email-link-box { margin-top: 1.25rem; padding: 1rem; background: var(--blue-light); border-radius: 10px; }
 .email-link-box p { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; }
 

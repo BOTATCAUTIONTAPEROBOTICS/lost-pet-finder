@@ -72,12 +72,30 @@
       <div class="account-card">
         <p>Signed in as: <strong id="account-email">Anonymous session</strong></p>
         <div id="link-email-section">
-          <p class="section-hint">Link an email to access your account from any device.</p>
-          <form id="link-email-form" class="inline-form">
-            <input type="email" id="link-email-input" placeholder="your@email.com" />
-            <button type="submit">Link Email</button>
-          </form>
-          <p id="link-email-msg" class="hint-msg" hidden></p>
+          <div class="email-tabs">
+            <button type="button" class="email-tab active" data-mode="new">New email</button>
+            <button type="button" class="email-tab" data-mode="existing">I have an account</button>
+          </div>
+
+          <!-- New email → attach to this anonymous session -->
+          <div id="email-mode-new" class="email-mode">
+            <p class="section-hint">Attach a new email to this session so you can access your data from any device.</p>
+            <form id="link-email-form" class="inline-form">
+              <input type="email" id="link-email-input" placeholder="your@email.com" />
+              <button type="submit">Link Email</button>
+            </form>
+            <p id="link-email-msg" class="hint-msg" hidden></p>
+          </div>
+
+          <!-- Existing account → magic-link sign in -->
+          <div id="email-mode-existing" class="email-mode" hidden>
+            <p class="section-hint">Already have an account? We'll email you a magic link to sign in.</p>
+            <form id="dash-login-form" class="inline-form">
+              <input type="email" id="dash-login-input" placeholder="your@email.com" />
+              <button type="submit">Send Magic Link</button>
+            </form>
+            <p id="dash-login-msg" class="hint-msg" hidden></p>
+          </div>
         </div>
         <button id="sign-out-btn" class="btn-outline" style="margin-top:1rem">Sign Out</button>
       </div>
