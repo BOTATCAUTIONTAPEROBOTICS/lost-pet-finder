@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 
@@ -36,22 +35,7 @@
         <input type="password" id="admin-password" required />
       </div>
       <div id="login-error" class="error-msg" hidden></div>
-      <div class="cf-turnstile" data-sitekey="0x4AAAAAADVkGdwquWYH6nw8"></div>
       <button type="submit">Sign In</button>
-    </form>
-  </section>
-
-  <!-- ── 2FA ───────────────────────────────────────────── -->
-  <section id="admin-2fa" class="owner-section" hidden>
-    <h2>Two-Factor Verification</h2>
-    <p>A verification code has been sent to your email.</p>
-    <form id="admin-2fa-form">
-      <div class="form-field">
-        <label for="otp-code">Verification Code</label>
-        <input type="text" id="otp-code" placeholder="6-digit code" maxlength="6" required />
-      </div>
-      <div id="otp-error" class="error-msg" hidden></div>
-      <button type="submit">Verify</button>
     </form>
   </section>
 

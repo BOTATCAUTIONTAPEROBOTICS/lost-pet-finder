@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('admin-login-form')?.addEventListener('submit', handleLogin);
-  document.getElementById('admin-2fa-form')?.addEventListener('submit', handleOtp);
   document.getElementById('admin-sign-out')?.addEventListener('click', adminSignOut);
 
   document.querySelectorAll('.admin-tab').forEach(btn => {
@@ -35,8 +34,7 @@ async function handleLogin(e) {
   btn.textContent = 'Signing in…';
   btn.disabled = true;
 
-  const captchaToken = document.querySelector('#admin-login-form [name="cf-turnstile-response"]')?.value;
-  const { data, error } = await getDb().auth.signInWithPassword({ email, password, options: { captchaToken } });
+  const { data, error } = await getDb().auth.signInWithPassword({ email, password });
 
   btn.textContent = 'Sign In';
   btn.disabled = false;
@@ -48,37 +46,6 @@ async function handleLogin(e) {
 
   if (!isAdmin(data.user)) {
     showError('login-error', 'Access denied.');
-    await getDb().auth.signOut();
-    return;
-  }
-
-  // Send 2FA OTP to email
-  await getDb().auth.signInWithOtp({ email });
-  document.getElementById('admin-login').hidden = true;
-  document.getElementById('admin-2fa').hidden   = false;
-}
-
-async function handleOtp(e) {
-  e.preventDefault();
-  const email = document.getElementById('admin-email').value.trim();
-  const token = document.getElementById('otp-code').value.trim();
-  const btn   = e.target.querySelector('button[type="submit"]');
-
-  btn.textContent = 'Verifying…';
-  btn.disabled = true;
-
-  const { data, error } = await getDb().auth.verifyOtp({ email, token, type: 'email' });
-
-  btn.textContent = 'Verify';
-  btn.disabled = false;
-
-  if (error || !data.user) {
-    showError('otp-error', 'Invalid or expired code. Try signing in again.');
-    return;
-  }
-
-  if (!isAdmin(data.user)) {
-    showError('otp-error', 'Access denied.');
     await getDb().auth.signOut();
     return;
   }
@@ -95,7 +62,6 @@ async function adminSignOut() {
 
 async function showPanel() {
   document.getElementById('admin-login').hidden  = true;
-  document.getElementById('admin-2fa').hidden    = true;
   document.getElementById('admin-panel').hidden  = false;
   await loadAdminPets();
 }

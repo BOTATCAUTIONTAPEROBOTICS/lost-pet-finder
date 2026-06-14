@@ -59,14 +59,14 @@ async function sendMagicLink(e) {
   btn.textContent = 'Sending…';
   btn.disabled = true;
 
-  const captchaToken = document.querySelector('#login-form [name="cf-turnstile-response"]')?.value;
-  const { error } = await getDb().auth.signInWithOtp({ email, options: { captchaToken } });
+  const { error } = await getDb().auth.signInWithOtp({ email });
 
   btn.textContent = 'Send Magic Link';
   btn.disabled = false;
 
   if (error) {
-    showError('login-error', 'Could not send link — check your email address.');
+    console.error('Magic link error:', error);
+    showError('login-error', error.message || 'Could not send link — check your email address.');
   } else {
     document.getElementById('login-sent').hidden = false;
     document.getElementById('login-form').hidden = true;
