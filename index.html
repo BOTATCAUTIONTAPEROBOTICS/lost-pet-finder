@@ -64,6 +64,26 @@
       </ul>
     </section>
 
+    <section id="testimonials">
+      <h2>What People Are Saying</h2>
+      <div id="testimonial-list" class="testimonial-list"></div>
+      <div class="testimonial-add">
+        <h3>Share your story</h3>
+        <form id="testimonial-form">
+          <div class="form-field">
+            <label for="testimonial-name">Your Name <span class="required">*</span></label>
+            <input type="text" id="testimonial-name" placeholder="e.g. Sarah M." required />
+          </div>
+          <div class="form-field">
+            <label for="testimonial-text">Your Story <span class="required">*</span></label>
+            <textarea id="testimonial-text" placeholder="How did Lost Pet Finder help you?" required></textarea>
+          </div>
+          <button type="submit">Add Testimonial</button>
+          <p id="testimonial-msg" class="hint-msg" hidden></p>
+        </form>
+      </div>
+    </section>
+
   </div>
 
   <!-- ── Post a Lost Pet ───────────────────────────────── -->
@@ -261,12 +281,12 @@
       <p class="section-hint">Quick, practical help — whether you've lost a pet or found one. Pick your situation:</p>
 
       <div class="board-tabs" role="tablist" aria-label="Choose your situation">
-        <button type="button" class="board-tab active" data-board="lost" role="tab" aria-selected="true">🐶 My pet is lost</button>
-        <button type="button" class="board-tab" data-board="found" role="tab" aria-selected="false">🐾 I spotted / found a pet</button>
+        <button type="button" class="board-tab active" id="board-tab-lost" data-board="lost" role="tab" aria-selected="true" aria-controls="board-panel-lost">🐶 My pet is lost</button>
+        <button type="button" class="board-tab" id="board-tab-found" data-board="found" role="tab" aria-selected="false" aria-controls="board-panel-found">🐾 I spotted / found a pet</button>
       </div>
 
       <!-- Tab: My pet is lost -->
-      <div class="board-panel" data-board-panel="lost" role="tabpanel">
+      <div class="board-panel" data-board-panel="lost" role="tabpanel" id="board-panel-lost" aria-labelledby="board-tab-lost">
         <h3>Lost a pet? Work through this checklist.</h3>
         <ul class="check-list" id="lost-checklist">
           <li><label><input type="checkbox" data-key="lost-1"> <span>Search your own block first — under porches, in bushes, in garages, and in quiet hiding spots.</span></label></li>
@@ -291,7 +311,7 @@
       </div>
 
       <!-- Tab: I spotted / found a pet -->
-      <div class="board-panel" data-board-panel="found" role="tabpanel" hidden>
+      <div class="board-panel" data-board-panel="found" role="tabpanel" hidden id="board-panel-found" aria-labelledby="board-tab-found">
         <h3>Spotted a stray? Remember these three things.</h3>
         <div class="tip-cards">
           <div class="tip-card">

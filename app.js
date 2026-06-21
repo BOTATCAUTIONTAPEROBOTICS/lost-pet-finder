@@ -472,6 +472,52 @@ function shareSelectedPet() {
   sharePet(id, name);
 }
 
+// ── Testimonials ───────────────────────────────────────────────────────────────
+
+const TESTIMONIALS_KEY = 'testimonials';
+
+const SEED_TESTIMONIALS = [
+  { name: 'Sarah M.',  avatar: '🐱', text: 'I posted my cat Mango at 9pm and a neighbor spotted him two streets over by morning. We were reunited within hours!' },
+  { name: 'Daniel R.', avatar: '🐶', text: 'The live map showed me exactly where people were seeing my dog. I drove straight there and found her — this site is a lifesaver.' },
+  { name: 'Priya K.',  avatar: '🐰', text: "Our whole neighborhood pitched in. Three sightings in one afternoon led us right to Bella. I can't thank these neighbors enough." },
+];
+
+function getAddedTestimonials() {
+  try { return JSON.parse(localStorage.getItem(TESTIMONIALS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function setupTestimonials() {
+  renderTestimonials();
+  document.getElementById('testimonial-form')?.addEventListener('submit', addTestimonial);
+}
+
+function renderTestimonials() {
+  const list = document.getElementById('testimonial-list');
+  if (!list) return;
+  const all = [...getAddedTestimonials(), ...SEED_TESTIMONIALS];
+  list.innerHTML = all.map(t => `
+    <div class="testimonial-card">
+      <div class="testimonial-avatar" aria-hidden="true">${escHtml(t.avatar || '💬')}</div>
+      <p class="quote">${escHtml(t.text)}</p>
+      <p class="who">— ${escHtml(t.name)}</p>
+    </div>`).join('');
+}
+
+function addTestimonial(e) {
+  e.preventDefault();
+  const name = document.getElementById('testimonial-name').value.trim();
+  const text = document.getElementById('testimonial-text').value.trim();
+  if (!name || !text) return;
+  const added = getAddedTestimonials();
+  added.unshift({ name, text, avatar: '💬' });
+  localStorage.setItem(TESTIMONIALS_KEY, JSON.stringify(added));
+  renderTestimonials();
+  e.target.reset();
+  setText('testimonial-msg', 'Thanks for sharing your story!');
+  showEl('testimonial-msg');
+}
+
 // ── Page navigation ───────────────────────────────────────────────────────────
 
 function showPage(target) {
@@ -541,6 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupAdvancedToggle('advanced-toggle', 'advanced-body', 'chevron');
   setupAdvancedToggle('sighting-advanced-toggle', 'sighting-advanced-body', 'sighting-chevron');
   setupInfoBoard();
+  setupTestimonials();
 
   const { data: { session } } = await getDb().auth.getSession();
   if (!session) await getDb().auth.signInAnonymously();
