@@ -267,7 +267,7 @@ async function reviewCase(id) {
           <div class="msg msg-${m.sender_role}">
             <span class="msg-role">${m.sender_role === 'owner' ? 'Owner' : 'Reporter'}</span>
             ${m.content ? `<p class="msg-content">${escHtml(m.content)}</p>` : ''}
-            ${m.photo_url ? `<a href="${escHtml(m.photo_url)}" target="_blank" rel="noopener"><img src="${escHtml(m.photo_url)}" class="msg-photo" alt="photo"></a>` : ''}
+            ${m.photo_url ? `<a href="${escHtml(m.photo_url)}" target="_blank" rel="noopener"><img src="${escHtml(m.photo_url)}" class="msg-photo" alt="Photo shared in the case thread"></a>` : ''}
             <span class="msg-time">${new Date(m.created_at).toLocaleString()}</span>
           </div>`).join('');
     blocks.push(`

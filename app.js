@@ -60,7 +60,7 @@ function renderPetCard(pet) {
   return `
     <div class="pet-card${pet.is_stolen ? ' pet-card-stolen' : ''}">
       ${pet.is_stolen ? '<span class="stolen-badge">STOLEN</span>' : ''}
-      ${pet.photo_url ? `<img src="${escHtml(pet.photo_url)}" alt="${escHtml(pet.pet_name)}" class="pet-card-photo">` : ''}
+      ${pet.photo_url ? `<img src="${escHtml(pet.photo_url)}" alt="Photo of ${escHtml(pet.pet_name)}, a lost ${escHtml(type.toLowerCase())}" class="pet-card-photo">` : ''}
       <h3>${escHtml(pet.pet_name)}</h3>
       <p class="pet-type-tag">${escHtml(type)}</p>
       <p class="pet-desc">${escHtml(pet.description)}</p>
