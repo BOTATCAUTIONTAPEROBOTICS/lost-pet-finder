@@ -152,38 +152,84 @@ async function deleteSighting(id) {
 
 // ── Stolen / Tracking ─────────────────────────────────────────────────────────
 
+let stolenCases = {};  // petId -> { pet, sightings }
+
 async function loadAdminStolen() {
+  const container = document.getElementById('admin-stolen-list');
+
   const { data: pets } = await getDb()
     .from('pets')
     .select('*')
     .eq('is_stolen', true)
     .order('stolen_reported_at', { ascending: false });
 
-  const container = document.getElementById('admin-stolen-list');
   if (!pets || pets.length === 0) {
     container.innerHTML = '<div class="empty-state">No pets reported stolen.</div>';
     return;
   }
 
-  container.innerHTML = pets.map(p => {
-    const reported = p.stolen_reported_at ? new Date(p.stolen_reported_at).toLocaleDateString() : '—';
-    const tracking = p.tracking_active;
-    return `
-    <div class="admin-row">
-      <div class="admin-row-info">
+  const ids = pets.map(p => p.id);
+  const { data: sightings } = await getDb()
+    .from('sightings')
+    .select('*')
+    .in('pet_id', ids)
+    .order('reported_at', { ascending: false });
+
+  stolenCases = {};
+  pets.forEach(p => { stolenCases[p.id] = { pet: p, sightings: [] }; });
+  (sightings || []).forEach(s => { if (stolenCases[s.pet_id]) stolenCases[s.pet_id].sightings.push(s); });
+
+  container.innerHTML = pets.map(p => renderStolenCase(stolenCases[p.id])).join('');
+}
+
+function renderStolenCase({ pet: p, sightings }) {
+  const reported  = p.stolen_reported_at ? new Date(p.stolen_reported_at).toLocaleString() : '—';
+  const tracking  = p.tracking_active;
+  const last      = sightings.find(s => s.location);
+  const lastKnown = last
+    ? `${escHtml(last.location)} <span class="date-tag">${new Date(last.reported_at).toLocaleString()}</span>`
+    : '<span class="section-hint">No sightings yet</span>';
+
+  return `
+    <div class="case-card">
+      <div class="case-head">
         <strong>${escHtml(p.pet_name)}</strong>
-        <span class="status-tag ${tracking ? 'status-tracking' : 'status-found'}">${tracking ? 'Tracking' : 'Tracking off'}</span>
+        ${p.case_confirmed
+          ? '<span class="status-tag status-tracking">Confirmed case</span>'
+          : '<span class="status-tag status-active">Under review</span>'}
+        <span class="status-tag ${tracking ? 'status-tracking' : 'status-found'}">${tracking ? 'Tracking on' : 'Tracking off'}</span>
         <span class="date-tag">Reported ${reported}</span>
-        <span>${escHtml(p.owner_contact)}</span>
       </div>
-      <div class="admin-row-actions">
-        <a class="btn-card btn-card-outline" href="owner.html?id=${p.id}" target="_blank" rel="noopener">View case</a>
-        <button class="${tracking ? 'btn-danger' : 'btn-card'}" onclick="toggleTracking('${p.id}', ${tracking})">
-          ${tracking ? 'Stop tracking' : 'Re-open tracking'}
-        </button>
+      <div class="case-meta">
+        <div><strong>Owner:</strong> ${escHtml(p.owner_contact)}</div>
+        <div><strong>Last known location:</strong> ${lastKnown}</div>
+        <div><strong>Sightings:</strong> ${sightings.length}</div>
       </div>
+      <div class="case-actions">
+        ${p.case_confirmed ? '' : `<button class="btn-primary" onclick="confirmCase('${p.id}')">Confirm case</button>`}
+        <button class="btn-card" onclick="reviewCase('${p.id}')">Review threads</button>
+        <button class="btn-card btn-card-outline" onclick="exportCase('${p.id}')">Export for police</button>
+        <a class="btn-card btn-card-outline" href="owner.html?id=${p.id}" target="_blank" rel="noopener">Map</a>
+        <button class="btn-card" onclick="toggleTracking('${p.id}', ${tracking})">${tracking ? 'Stop tracking' : 'Re-open tracking'}</button>
+        <button class="btn-danger" onclick="dismissCase('${p.id}')">Dismiss</button>
+      </div>
+      <div class="case-review" id="case-review-${p.id}" hidden></div>
     </div>`;
-  }).join('');
+}
+
+async function confirmCase(id) {
+  const { data, error } = await getDb().from('pets').update({ case_confirmed: true }).eq('id', id).select();
+  if (error || !data || data.length === 0) alert('Could not update. Make sure your admin account has is_admin set in app_metadata.');
+  await loadAdminStolen();
+}
+
+async function dismissCase(id) {
+  if (!confirm('Dismiss this case? This removes the STOLEN flag and stops tracking.')) return;
+  const { data, error } = await getDb().from('pets')
+    .update({ is_stolen: false, tracking_active: false, case_confirmed: false })
+    .eq('id', id).select();
+  if (error || !data || data.length === 0) alert('Could not dismiss. Make sure your admin account has is_admin set in app_metadata.');
+  await loadAdminStolen();
 }
 
 async function toggleTracking(id, currentlyTracking) {
@@ -200,6 +246,73 @@ async function toggleTracking(id, currentlyTracking) {
     alert('Could not change tracking. Make sure your admin account has is_admin set in app_metadata.');
   }
   await loadAdminStolen();
+}
+
+async function reviewCase(id) {
+  const box = document.getElementById(`case-review-${id}`);
+  if (!box) return;
+  if (!box.hidden) { box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = '<p class="thread-loading">Loading threads…</p>';
+
+  const sightings = stolenCases[id]?.sightings || [];
+  if (sightings.length === 0) { box.innerHTML = '<p class="section-hint">No sightings or threads for this case yet.</p>'; return; }
+
+  const blocks = [];
+  for (const s of sightings) {
+    const { data: msgs } = await getDb().from('messages').select('*').eq('sighting_id', s.id).order('created_at', { ascending: true });
+    const msgsHtml = (msgs || []).length === 0
+      ? '<p class="thread-empty">No messages.</p>'
+      : (msgs || []).map(m => `
+          <div class="msg msg-${m.sender_role}">
+            <span class="msg-role">${m.sender_role === 'owner' ? 'Owner' : 'Reporter'}</span>
+            ${m.content ? `<p class="msg-content">${escHtml(m.content)}</p>` : ''}
+            ${m.photo_url ? `<a href="${escHtml(m.photo_url)}" target="_blank" rel="noopener"><img src="${escHtml(m.photo_url)}" class="msg-photo" alt="photo"></a>` : ''}
+            <span class="msg-time">${new Date(m.created_at).toLocaleString()}</span>
+          </div>`).join('');
+    blocks.push(`
+      <div class="case-thread">
+        <p class="case-thread-head"><strong>${escHtml(s.location)}</strong> &bull; ${escHtml(s.reporter_name)}${s.reporter_contact ? ' &bull; ' + escHtml(s.reporter_contact) : ''} <span class="date-tag">${new Date(s.reported_at).toLocaleString()}</span></p>
+        <div class="thread-messages">${msgsHtml}</div>
+      </div>`);
+  }
+  box.innerHTML = blocks.join('');
+}
+
+function exportCase(id) {
+  const c = stolenCases[id];
+  if (!c) return;
+  const p = c.pet;
+  const L = [];
+  L.push(`STOLEN PET CASE — ${p.pet_name}`);
+  L.push(`Status: ${p.case_confirmed ? 'CONFIRMED by admin' : 'Under review'}`);
+  L.push(`Reported stolen: ${p.stolen_reported_at ? new Date(p.stolen_reported_at).toLocaleString() : '—'}`);
+  L.push(`Pet: ${petTypeText(p)} — ${p.description}`);
+  if (p.reward) L.push(`Reward offered: ${p.reward}`);
+  L.push(`Owner contact: ${p.owner_contact}`);
+  L.push('');
+  L.push(`SIGHTINGS (${c.sightings.length}) — most recent first:`);
+  c.sightings.forEach((s, i) => {
+    L.push(`${i + 1}. ${new Date(s.reported_at).toLocaleString()} — ${s.location}`);
+    if (s.latitude && s.longitude) L.push(`   GPS: ${s.latitude}, ${s.longitude}`);
+    L.push(`   Reporter: ${s.reporter_name}${s.reporter_contact ? ' (' + s.reporter_contact + ')' : ''}${s.has_pet ? '  *** SAYS THEY HAVE THE PET ***' : ''}`);
+    if (s.note) L.push(`   Note: ${s.note}`);
+    if (s.photo_url) L.push(`   Photo: ${s.photo_url}`);
+  });
+  L.push('');
+  L.push(`Generated ${new Date().toLocaleString()} via Lost Pet Finder.`);
+
+  const blob = new Blob([L.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `stolen-case-${p.pet_name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+function petTypeText(p) {
+  return p.pet_type === 'other' ? (p.pet_type_other || 'Other') : p.pet_type.charAt(0).toUpperCase() + p.pet_type.slice(1);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

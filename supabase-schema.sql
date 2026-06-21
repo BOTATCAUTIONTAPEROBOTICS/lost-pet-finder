@@ -28,6 +28,7 @@ create table if not exists pets (
   is_stolen       boolean      not null default false,
   stolen_reported_at timestamptz,
   tracking_active boolean      not null default false,
+  case_confirmed  boolean      not null default false,
   created_at      timestamptz  default now()
 );
 
@@ -153,6 +154,7 @@ alter table pets      add column if not exists pet_returned       boolean not nu
 alter table pets      add column if not exists is_stolen          boolean not null default false;
 alter table pets      add column if not exists stolen_reported_at timestamptz;
 alter table pets      add column if not exists tracking_active    boolean not null default false;
+alter table pets      add column if not exists case_confirmed     boolean not null default false;
 
 alter table sightings add column if not exists payment_type    text;
 alter table sightings add column if not exists payment_handle  text;
@@ -180,6 +182,10 @@ drop policy if exists "sightings_admin_update" on sightings;
 create policy "sightings_admin_update" on sightings for update using (public.is_admin());
 drop policy if exists "sightings_admin_delete" on sightings;
 create policy "sightings_admin_delete" on sightings for delete using (public.is_admin());
+
+-- Admins can read any message thread (to review stolen cases).
+drop policy if exists "messages_admin_select" on messages;
+create policy "messages_admin_select" on messages for select using (public.is_admin());
 
 -- Only an admin may STOP tracking a stolen case. An owner may switch tracking ON
 -- (by reporting the pet stolen) but cannot switch it back off.

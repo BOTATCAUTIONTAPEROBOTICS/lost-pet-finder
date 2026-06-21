@@ -580,6 +580,20 @@ footer a { color: var(--text-muted); }
 .status-tracking { background: var(--red-light); color: var(--red); }
 .admin-row-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
 
+/* ── Admin stolen case cards ─────────────────────────── */
+.case-card {
+  border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 1rem 1.1rem; margin-bottom: 1rem; background: var(--white);
+}
+.case-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+.case-head strong { font-size: 1.05rem; }
+.case-meta { font-size: 0.9rem; color: var(--text); margin-bottom: 0.75rem; }
+.case-meta > div { margin-bottom: 0.2rem; }
+.case-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.case-review { margin-top: 0.9rem; border-top: 1.5px solid var(--border); padding-top: 0.9rem; }
+.case-thread { margin-bottom: 1rem; }
+.case-thread-head { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+
 /* ── Print styles ────────────────────────────────────── */
 @media print {
   .no-print { display: none !important; }
