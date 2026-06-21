@@ -594,15 +594,92 @@ footer a { color: var(--text-muted); }
 .case-thread { margin-bottom: 1rem; }
 .case-thread-head { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
 
+/* ── Printable flyer ─────────────────────────────────── */
+/* Hidden on screen; revealed only when "Print Flyer" is used (see @media print). */
+.flyer-root { display: none; }
+
+.flyer-sheet {
+  --flyer-accent: var(--blue-dark);
+  font-family: 'Nunito', sans-serif;
+  color: #111; background: #fff;
+  width: 100%; max-width: 760px; margin: 0 auto;
+  padding: 2rem 2.25rem; text-align: center;
+}
+.flyer-head { border-bottom: 6px solid var(--flyer-accent); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+.flyer-kicker {
+  font-size: 1.2rem; font-weight: 700; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--flyer-accent);
+}
+.flyer-title {
+  font-size: 3.6rem; font-weight: 800; line-height: 1.05;
+  letter-spacing: -1px; color: var(--flyer-accent);
+}
+.flyer-emoji { font-size: 3.2rem; }
+.flyer-photo {
+  width: 100%; max-height: 360px; object-fit: cover;
+  border: 4px solid var(--flyer-accent); border-radius: 10px;
+  margin: 1.25rem 0 0.5rem;
+}
+.flyer-name { font-size: 2.4rem; font-weight: 800; margin: 0.75rem 0 0.25rem; }
+.flyer-reward {
+  display: inline-block; font-size: 1.6rem; font-weight: 800; color: #fff;
+  background: var(--orange); border-radius: 999px;
+  padding: 0.35rem 1.5rem; margin: 0.5rem 0 1rem;
+}
+.flyer-facts { font-size: 1.15rem; margin-bottom: 1rem; }
+.flyer-desc { margin-bottom: 0.6rem; }
+.flyer-fact { margin: 0.15rem 0; }
+.flyer-tips {
+  text-align: left; background: #fafafa;
+  border: 2px dashed var(--flyer-accent); border-radius: 10px;
+  padding: 1rem 1.25rem; margin: 1rem 0 1.25rem;
+}
+.flyer-tips h3 {
+  font-size: 1.2rem; font-weight: 800; color: var(--flyer-accent);
+  text-align: center; margin-bottom: 0.5rem;
+}
+.flyer-tips ul { list-style: none; }
+.flyer-tips li { position: relative; padding-left: 1.6rem; margin: 0.35rem 0; font-size: 1.05rem; }
+.flyer-tips li::before { content: '🐾'; position: absolute; left: 0; }
+.flyer-contact-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
+  border-top: 3px solid var(--flyer-accent); padding-top: 1rem; text-align: left;
+}
+.flyer-contact-label {
+  font-size: 1.05rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: #444;
+}
+.flyer-contact-value { font-size: 1.8rem; font-weight: 800; color: var(--flyer-accent); word-break: break-word; }
+.flyer-qr { text-align: center; flex-shrink: 0; }
+.flyer-qr img, .flyer-qr canvas { display: block; margin: 0 auto; }
+.flyer-qr-cap { font-size: 0.85rem; font-weight: 700; color: #444; margin-top: 0.25rem; max-width: 140px; }
+.flyer-foot { margin-top: 1.25rem; font-size: 0.9rem; color: #777; }
+
 /* ── Print styles ────────────────────────────────────── */
 @media print {
   .no-print { display: none !important; }
-  body { background: white; }
-  main { margin: 0; padding: 0; }
-  section { box-shadow: none; border-radius: 0; padding: 1rem; }
-  .pet-detail-card { page-break-inside: avoid; }
-  #map { height: 400px; }
+  body { background: #fff; }
+
+  /* When printing a flyer, hide the app chrome and show only the flyer sheet. */
+  body.printing-flyer > header,
+  body.printing-flyer > nav,
+  body.printing-flyer > main,
+  body.printing-flyer > footer { display: none !important; }
+  body.printing-flyer .flyer-root { display: block !important; }
+
+  .flyer-sheet {
+    max-width: 100%; padding: 0;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .flyer-sheet, .flyer-photo, .flyer-tips, .flyer-contact-row { page-break-inside: avoid; }
+
+  /* Fallback for a direct browser print (no flyer button): keep the old behaviour. */
+  body:not(.printing-flyer) main { margin: 0; padding: 0; }
+  body:not(.printing-flyer) section { box-shadow: none; border-radius: 0; padding: 1rem; }
+  body:not(.printing-flyer) .pet-detail-card { page-break-inside: avoid; }
+  body:not(.printing-flyer) #map { height: 400px; }
 }
+@page { margin: 0.5in; }
 
 /* ── Tips & Checklists (information board) ────────────── */
 .board-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }

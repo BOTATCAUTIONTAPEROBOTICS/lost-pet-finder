@@ -30,7 +30,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('stolen-toggle')?.addEventListener('click', () => reportStolen(id));
   document.getElementById('finder-cancel')?.addEventListener('click', closeFinderPicker);
   document.getElementById('delete-post-btn')?.addEventListener('click', () => deletePost(id));
-  document.getElementById('print-btn')?.addEventListener('click', () => window.print());
+  document.getElementById('print-btn')?.addEventListener('click', printFlyer);
+  window.addEventListener('afterprint', () => document.body.classList.remove('printing-flyer'));
   document.getElementById('copy-link-btn')?.addEventListener('click', copyLink);
   document.getElementById('edit-form')?.addEventListener('submit', e => saveEdit(e, id));
   document.getElementById('edit-toggle')?.addEventListener('click', toggleEdit);
@@ -578,6 +579,132 @@ function copyLink() {
   const btn = document.getElementById('copy-link-btn');
   btn.textContent = 'Copied!';
   setTimeout(() => btn.textContent = 'Copy Link', 2000);
+}
+
+// ── Printable flyer ───────────────────────────────────────────────────────────
+// One ready-made flyer template per animal type. Headline, accent colour and the
+// "if you find me" advice are tailored to how that animal behaves when lost; the
+// name, reward, photo and other details are auto-filled from the post.
+
+const FLYER_TEMPLATES = {
+  dog: {
+    emoji: '🐕', word: 'DOG', accent: '#2B7FBA',
+    tips: [
+      "Please don't chase me — a scared dog can bolt into traffic.",
+      "Crouch low, avoid staring, and tempt me with food or a calm voice.",
+      "If you can't catch me safely, note where I went and call below.",
+    ],
+  },
+  cat: {
+    emoji: '🐈', word: 'CAT', accent: '#E05520',
+    tips: [
+      "I'm likely hiding close by — check under porches, cars, sheds and bushes.",
+      "I may be too frightened to come out, even to my owner. Don't chase me.",
+      "Leave food out and call the number below with the location.",
+    ],
+  },
+  rabbit: {
+    emoji: '🐇', word: 'RABBIT', accent: '#7A4FB5',
+    tips: [
+      "I frighten easily and may freeze or dart — approach slowly and stay low.",
+      "Tempt me with greens and gently block off escape routes.",
+      "Check sheltered, shady spots: under bushes, decks and hedges.",
+    ],
+  },
+  bird: {
+    emoji: '🦜', word: 'BIRD', accent: '#2E7D32',
+    tips: [
+      "I may be perched high in a tree or on a roof — look and listen for me.",
+      "Don't startle me; speak softly and call my owner right away.",
+      "Familiar voices and sounds may keep me nearby until help arrives.",
+    ],
+  },
+  other: {
+    emoji: '🐾', word: 'PET', accent: '#2B7FBA',
+    tips: [
+      "Please don't chase me — I may be frightened and run.",
+      "Approach calmly and quietly, and offer food if it's safe to.",
+      "Note where you saw me and call the number below.",
+    ],
+  },
+};
+
+function flyerTemplate(pet) {
+  const t = FLYER_TEMPLATES[pet.pet_type] || FLYER_TEMPLATES.other;
+  const word = pet.pet_type === 'other'
+    ? (pet.pet_type_other ? pet.pet_type_other.toUpperCase() : 'PET')
+    : t.word;
+  return { ...t, word };
+}
+
+function buildFlyerHtml(pet) {
+  const t = flyerTemplate(pet);
+  const missing = new Date(pet.missing_since).toLocaleDateString(undefined, {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+  const tips = t.tips.map(x => `<li>${esc(x)}</li>`).join('');
+
+  return `
+    <article class="flyer-sheet" style="--flyer-accent:${t.accent}">
+      <header class="flyer-head">
+        <p class="flyer-kicker">Have you seen me?</p>
+        <h1 class="flyer-title"><span class="flyer-emoji">${t.emoji}</span> LOST ${esc(t.word)}</h1>
+      </header>
+
+      ${pet.photo_url ? `<img src="${esc(pet.photo_url)}" class="flyer-photo" alt="Photo of ${esc(pet.pet_name)}">` : ''}
+
+      <h2 class="flyer-name">${esc(pet.pet_name)}</h2>
+      ${pet.reward ? `<p class="flyer-reward">REWARD: ${esc(pet.reward)}</p>` : ''}
+
+      <div class="flyer-facts">
+        ${pet.description ? `<p class="flyer-desc">${esc(pet.description)}</p>` : ''}
+        ${pet.last_seen_area ? `<p class="flyer-fact"><strong>Last seen:</strong> ${esc(pet.last_seen_area)}</p>` : ''}
+        <p class="flyer-fact"><strong>Missing since:</strong> ${esc(missing)}</p>
+      </div>
+
+      <div class="flyer-tips">
+        <h3>If you find me</h3>
+        <ul>${tips}</ul>
+      </div>
+
+      <div class="flyer-contact-row">
+        <div class="flyer-contact">
+          <p class="flyer-contact-label">Please contact</p>
+          <p class="flyer-contact-value">${esc(pet.owner_contact)}</p>
+        </div>
+        <div class="flyer-qr">
+          <div id="flyer-qr-code"></div>
+          <p class="flyer-qr-cap">Scan to report a sighting</p>
+        </div>
+      </div>
+
+      <p class="flyer-foot">Posted with Lost Pet Finder — helping neighbors help each other.</p>
+    </article>`;
+}
+
+function printFlyer() {
+  if (!currentPet) return;
+
+  const root = document.getElementById('flyer-root');
+  if (!root) { window.print(); return; }
+
+  root.innerHTML = buildFlyerHtml(currentPet);
+
+  // QR code → the public "report a sighting" page for this pet.
+  const qrEl = document.getElementById('flyer-qr-code');
+  if (qrEl && typeof QRCode !== 'undefined') {
+    try {
+      new QRCode(qrEl, {
+        text: `${location.origin}/sighting.html?id=${currentPet.id}`,
+        width: 132, height: 132, correctLevel: QRCode.CorrectLevel.M,
+      });
+    } catch { qrEl.closest('.flyer-qr')?.remove(); }
+  } else if (qrEl) {
+    qrEl.closest('.flyer-qr')?.remove(); // QR library unavailable — drop the empty slot
+  }
+
+  document.body.classList.add('printing-flyer');
+  window.print();
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

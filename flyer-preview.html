@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flyer Preview (disposable — safe to delete)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Preview-only: the real .flyer-root is hidden on screen; force it visible here. */
+    body { background: #e6eef5; padding: 2rem 0; }
+    .flyer-root { display: block !important; }
+    .flyer-sheet { box-shadow: 0 8px 30px rgba(0,0,0,.18); margin-bottom: 2.5rem; }
+    .preview-note { text-align:center; font-family:'Nunito',sans-serif; color:#5A7080; margin-bottom:1.5rem; }
+    .type-switch { text-align:center; margin-bottom:1.5rem; font-family:'Nunito',sans-serif; }
+    .type-switch button { font:inherit; font-weight:700; margin:0 .25rem; padding:.5rem 1rem; border:2px solid #C8DFF0; border-radius:999px; background:#fff; cursor:pointer; }
+    .type-switch button.active { background:#2B7FBA; color:#fff; border-color:#2B7FBA; }
+  </style>
+</head>
+<body>
+  <p class="preview-note">⚠ Disposable preview of the printed flyer. Pick a type, then use your browser's Print (Ctrl/Cmd+P) to see the page output. Delete this file when done.</p>
+  <div class="type-switch" id="switch"></div>
+  <div id="flyer-root" class="flyer-root" aria-hidden="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+  <script>
+    // Mirrors owner.js buildFlyerHtml + FLYER_TEMPLATES so the preview matches the app exactly.
+    function esc(s){return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+    const FLYER_TEMPLATES = {
+      dog:{emoji:'🐕',word:'DOG',accent:'#2B7FBA',tips:["Please don't chase me — a scared dog can bolt into traffic.","Crouch low, avoid staring, and tempt me with food or a calm voice.","If you can't catch me safely, note where I went and call below."]},
+      cat:{emoji:'🐈',word:'CAT',accent:'#E05520',tips:["I'm likely hiding close by — check under porches, cars, sheds and bushes.","I may be too frightened to come out, even to my owner. Don't chase me.","Leave food out and call the number below with the location."]},
+      rabbit:{emoji:'🐇',word:'RABBIT',accent:'#7A4FB5',tips:["I frighten easily and may freeze or dart — approach slowly and stay low.","Tempt me with greens and gently block off escape routes.","Check sheltered, shady spots: under bushes, decks and hedges."]},
+      bird:{emoji:'🦜',word:'BIRD',accent:'#2E7D32',tips:["I may be perched high in a tree or on a roof — look and listen for me.","Don't startle me; speak softly and call my owner right away.","Familiar voices and sounds may keep me nearby until help arrives."]},
+      other:{emoji:'🐾',word:'PET',accent:'#2B7FBA',tips:["Please don't chase me — I may be frightened and run.","Approach calmly and quietly, and offer food if it's safe to.","Note where you saw me and call the number below."]},
+    };
+    function flyerTemplate(pet){const t=FLYER_TEMPLATES[pet.pet_type]||FLYER_TEMPLATES.other;const word=pet.pet_type==='other'?(pet.pet_type_other?pet.pet_type_other.toUpperCase():'PET'):t.word;return {...t,word};}
+    function buildFlyerHtml(pet){
+      const t=flyerTemplate(pet);
+      const missing=new Date(pet.missing_since).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+      const tips=t.tips.map(x=>`<li>${esc(x)}</li>`).join('');
+      return `
+      <article class="flyer-sheet" style="--flyer-accent:${t.accent}">
+        <header class="flyer-head">
+          <p class="flyer-kicker">Have you seen me?</p>
+          <h1 class="flyer-title"><span class="flyer-emoji">${t.emoji}</span> LOST ${esc(t.word)}</h1>
+        </header>
+        ${pet.photo_url?`<img src="${esc(pet.photo_url)}" class="flyer-photo" alt="Photo of ${esc(pet.pet_name)}">`:''}
+        <h2 class="flyer-name">${esc(pet.pet_name)}</h2>
+        ${pet.reward?`<p class="flyer-reward">REWARD: ${esc(pet.reward)}</p>`:''}
+        <div class="flyer-facts">
+          ${pet.description?`<p class="flyer-desc">${esc(pet.description)}</p>`:''}
+          ${pet.last_seen_area?`<p class="flyer-fact"><strong>Last seen:</strong> ${esc(pet.last_seen_area)}</p>`:''}
+          <p class="flyer-fact"><strong>Missing since:</strong> ${esc(missing)}</p>
+        </div>
+        <div class="flyer-tips"><h3>If you find me</h3><ul>${tips}</ul></div>
+        <div class="flyer-contact-row">
+          <div class="flyer-contact">
+            <p class="flyer-contact-label">Please contact</p>
+            <p class="flyer-contact-value">${esc(pet.owner_contact)}</p>
+          </div>
+          <div class="flyer-qr"><div class="flyer-qr-code"></div><p class="flyer-qr-cap">Scan to report a sighting</p></div>
+        </div>
+        <p class="flyer-foot">Posted with Lost Pet Finder — helping neighbors help each other.</p>
+      </article>`;
+    }
+
+    const SAMPLES = {
+      dog:    {pet_type:'dog',    pet_name:'Rex',     reward:'$200', description:'Friendly golden retriever, red collar, answers to Rex.', last_seen_area:'Maple Street & 4th Ave', missing_since:'2026-06-12', owner_contact:'(555) 123-4567', photo_url:'https://placedog.net/640/400?id=12'},
+      cat:    {pet_type:'cat',    pet_name:'Mittens', reward:'$75',  description:'Shy black tabby with white paws, no collar.', last_seen_area:'Behind the library', missing_since:'2026-06-16', owner_contact:'mittens.home@email.com', photo_url:'https://placekitten.com/640/400'},
+      rabbit: {pet_type:'rabbit', pet_name:'Clover',  reward:null,   description:'Small grey lop-eared rabbit.', last_seen_area:'Community garden', missing_since:'2026-06-18', owner_contact:'(555) 222-9090', photo_url:null},
+      bird:   {pet_type:'bird',   pet_name:'Kiwi',    reward:'$120', description:'Green budgie, very talkative.', last_seen_area:'Oak Park', missing_since:'2026-06-19', owner_contact:'(555) 777-1212', photo_url:null},
+      other:  {pet_type:'other',  pet_type_other:'Ferret', pet_name:'Slinky', reward:'$50', description:'Brown ferret, curious and friendly.', last_seen_area:'Elm Street', missing_since:'2026-06-15', owner_contact:'(555) 444-3333', photo_url:null},
+    };
+
+    function render(type){
+      const root=document.getElementById('flyer-root');
+      root.innerHTML=buildFlyerHtml(SAMPLES[type]);
+      const qr=root.querySelector('.flyer-qr-code');
+      if(qr && typeof QRCode!=='undefined'){ try{ new QRCode(qr,{text:'https://example.com/sighting.html?id=demo',width:132,height:132,correctLevel:QRCode.CorrectLevel.M}); }catch(e){} }
+      document.querySelectorAll('#switch button').forEach(b=>b.classList.toggle('active',b.dataset.t===type));
+    }
+    const sw=document.getElementById('switch');
+    Object.keys(SAMPLES).forEach(t=>{const b=document.createElement('button');b.textContent=t;b.dataset.t=t;b.onclick=()=>render(t);sw.appendChild(b);});
+    render('dog');
+  </script>
+</body>
+</html>
