@@ -158,6 +158,8 @@ async function submitLostPet(e) {
 
   const link = `${location.origin}/owner.html?id=${data.id}`;
   document.getElementById('owner-link-input').value = link;
+  const viewOwnerLink = document.getElementById('view-owner-page');
+  if (viewOwnerLink) viewOwnerLink.href = link;
   showEl('post-success');
   e.target.reset();
   hideEl('photo-preview');
@@ -322,6 +324,8 @@ async function submitSighting(e) {
   const sightingLink = `${location.origin}/sighting.html?id=${data.id}`;
   const linkEl = document.getElementById('sighting-private-link');
   if (linkEl) linkEl.value = sightingLink;
+  const viewSightingLink = document.getElementById('view-sighting-page');
+  if (viewSightingLink) viewSightingLink.href = sightingLink;
 
   showEl('sighting-success');
   e.target.reset();
