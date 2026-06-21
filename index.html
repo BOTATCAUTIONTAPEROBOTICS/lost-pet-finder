@@ -20,6 +20,7 @@
   <a href="#" data-target="home" class="active">Home</a>
   <a href="#" data-target="post">Post a Lost Pet</a>
   <a href="#" data-target="sighting">Report a Sighting</a>
+  <a href="#" data-target="tips">Tips</a>
   <a href="#" data-target="mypets">My Pets</a>
   <a href="dashboard.html">Dashboard</a>
 </nav>
@@ -250,6 +251,77 @@
       <h2>My Active Posts</h2>
       <p class="section-hint">Links are saved on this device. Max 3 active posts at once.</p>
       <div id="my-pets-list"></div>
+    </section>
+  </div>
+
+  <!-- ── Tips & Checklists (Information Board) ──────────── -->
+  <div class="page" data-page="tips" hidden>
+    <section id="info-board">
+      <h2>Tips &amp; Checklists</h2>
+      <p class="section-hint">Quick, practical help — whether you've lost a pet or found one. Pick your situation:</p>
+
+      <div class="board-tabs" role="tablist" aria-label="Choose your situation">
+        <button type="button" class="board-tab active" data-board="lost" role="tab" aria-selected="true">🐶 My pet is lost</button>
+        <button type="button" class="board-tab" data-board="found" role="tab" aria-selected="false">🐾 I spotted / found a pet</button>
+      </div>
+
+      <!-- Tab: My pet is lost -->
+      <div class="board-panel" data-board-panel="lost" role="tabpanel">
+        <h3>Lost a pet? Work through this checklist.</h3>
+        <ul class="check-list" id="lost-checklist">
+          <li><label><input type="checkbox" data-key="lost-1"> <span>Search your own block first — under porches, in bushes, in garages, and in quiet hiding spots.</span></label></li>
+          <li><label><input type="checkbox" data-key="lost-2"> <span>Post your pet here so neighbors get the details and your contact right away.</span></label></li>
+          <li><label><input type="checkbox" data-key="lost-3"> <span>Call or visit nearby shelters and vets within 24 hours — leave a photo and your phone number.</span></label></li>
+          <li><label><input type="checkbox" data-key="lost-4"> <span>Share the post widely — neighborhood groups, WhatsApp, and the share button below.</span></label></li>
+          <li><label><input type="checkbox" data-key="lost-5"> <span>Search again at dawn and after dark — scared pets move and hide when it's quiet.</span></label></li>
+        </ul>
+        <p class="check-progress" id="lost-progress">0 of 5 done</p>
+
+        <div class="share-tool">
+          <h3>📣 Share a lost pet</h3>
+          <p class="section-hint">Spread the word — choose a posted pet and send it to your neighbors.</p>
+          <div class="share-row">
+            <select id="share-pet-select" aria-label="Choose a lost pet to share">
+              <option value="">Loading…</option>
+            </select>
+            <button type="button" id="share-pet-btn" class="btn-primary">Share this pet</button>
+          </div>
+          <p id="share-pet-msg" class="hint-msg" hidden></p>
+        </div>
+      </div>
+
+      <!-- Tab: I spotted / found a pet -->
+      <div class="board-panel" data-board-panel="found" role="tabpanel" hidden>
+        <h3>Spotted a stray? Remember these three things.</h3>
+        <div class="tip-cards">
+          <div class="tip-card">
+            <span class="tip-icon" aria-hidden="true">🐾</span>
+            <h4>Don't chase</h4>
+            <p>Crouch down, stay calm, and let the animal come to you — chasing makes a scared pet bolt.</p>
+          </div>
+          <div class="tip-card">
+            <span class="tip-icon" aria-hidden="true">📸</span>
+            <h4>Photo + report</h4>
+            <p>Snap a clear photo and use Report a Sighting so the owner is alerted instantly.</p>
+          </div>
+          <div class="tip-card">
+            <span class="tip-icon" aria-hidden="true">🦴</span>
+            <h4>Check for a collar</h4>
+            <p>From a safe distance, look for a collar or ID tag — but never corner a frightened animal.</p>
+          </div>
+        </div>
+
+        <div class="identify-quiz">
+          <h3>✅ Have you seen this pet?</h3>
+          <p class="section-hint">Answer these three to decide whether the animal you found is likely someone's lost pet.</p>
+          <ul class="check-list" id="identify-checklist">
+            <li><label><input type="checkbox" class="identify-check"> <span>Does it have a collar or harness?</span></label></li>
+            <li><label><input type="checkbox" class="identify-check"> <span>Does it have an ID tag, or look well-groomed (likely owned)?</span></label></li>
+            <li><label><input type="checkbox" class="identify-check"> <span>Does it match a pet posted on this site?</span></label></li>
+          </ul>
+          <div id="identify-result" class="identify-result" hidden></div>
+        </div>
+      </div>
     </section>
   </div>
 

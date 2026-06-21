@@ -374,6 +374,104 @@ async function sharePet(id, name) {
   window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
 }
 
+// ── Tips & Checklists (information board) ──────────────────────────────────────
+
+const LOST_CHECKLIST_KEY = 'lostChecklist';
+
+function setupInfoBoard() {
+  document.querySelectorAll('.board-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchBoard(tab.dataset.board));
+  });
+
+  const saved = getLostChecklist();
+  document.querySelectorAll('#lost-checklist input[type="checkbox"]').forEach(cb => {
+    cb.checked = saved[cb.dataset.key] === true;
+    cb.addEventListener('change', () => {
+      const state = getLostChecklist();
+      state[cb.dataset.key] = cb.checked;
+      localStorage.setItem(LOST_CHECKLIST_KEY, JSON.stringify(state));
+      updateLostProgress();
+    });
+  });
+  updateLostProgress();
+
+  document.querySelectorAll('.identify-check').forEach(cb => {
+    cb.addEventListener('change', updateIdentifyResult);
+  });
+
+  document.getElementById('share-pet-btn')?.addEventListener('click', shareSelectedPet);
+}
+
+function getLostChecklist() {
+  try { return JSON.parse(localStorage.getItem(LOST_CHECKLIST_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function updateLostProgress() {
+  const boxes = document.querySelectorAll('#lost-checklist input[type="checkbox"]');
+  const done  = [...boxes].filter(b => b.checked).length;
+  const allDone = boxes.length > 0 && done === boxes.length;
+  setText('lost-progress', allDone ? `All ${boxes.length} done — great work! 🎉` : `${done} of ${boxes.length} done`);
+}
+
+function switchBoard(name) {
+  document.querySelectorAll('.board-tab').forEach(tab => {
+    const active = tab.dataset.board === name;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('.board-panel').forEach(panel => {
+    panel.hidden = panel.dataset.boardPanel !== name;
+  });
+}
+
+function updateIdentifyResult() {
+  const checked = [...document.querySelectorAll('.identify-check')].filter(c => c.checked).length;
+  const box = document.getElementById('identify-result');
+  if (!box) return;
+  if (checked === 0) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML =
+    `<strong>This is likely someone's lost pet.</strong> ` +
+    `Report a sighting so the owner knows where to look — it only takes a minute.` +
+    `<button type="button" class="btn-primary" id="identify-report-btn">Report a Sighting →</button>`;
+  document.getElementById('identify-report-btn')?.addEventListener('click', () => showPage('sighting'));
+}
+
+async function loadSharePets() {
+  const sel = document.getElementById('share-pet-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Loading…</option>';
+
+  const { data: pets } = await getDb()
+    .from('pets')
+    .select('id, pet_name, pet_type, pet_type_other')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  if (!pets || pets.length === 0) {
+    sel.innerHTML = '<option value="">No lost pets posted yet</option>';
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  sel.innerHTML = '<option value="">Select a pet to share…</option>' +
+    pets.map(p => `<option value="${escHtml(p.id)}" data-name="${escHtml(p.pet_name)}">${escHtml(p.pet_name)} — ${escHtml(petTypeLabel(p.pet_type, p.pet_type_other))}</option>`).join('');
+}
+
+function shareSelectedPet() {
+  const sel = document.getElementById('share-pet-select');
+  const id  = sel?.value;
+  if (!id) {
+    setText('share-pet-msg', 'Pick a pet from the list first.');
+    showEl('share-pet-msg');
+    return;
+  }
+  const name = sel.options[sel.selectedIndex]?.dataset.name || 'this pet';
+  hideEl('share-pet-msg');
+  sharePet(id, name);
+}
+
 // ── Page navigation ───────────────────────────────────────────────────────────
 
 function showPage(target) {
@@ -384,6 +482,7 @@ function showPage(target) {
   if (link) link.classList.add('active');
   if (target === 'sighting') loadPetsDropdown();
   if (target === 'mypets')   renderMyPets();
+  if (target === 'tips')     loadSharePets();
 }
 
 // ── Photo preview helper ──────────────────────────────────────────────────────
@@ -441,6 +540,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupPhotoPreview('sighting-photo-input', 'sighting-photo-preview');
   setupAdvancedToggle('advanced-toggle', 'advanced-body', 'chevron');
   setupAdvancedToggle('sighting-advanced-toggle', 'sighting-advanced-body', 'sighting-chevron');
+  setupInfoBoard();
 
   const { data: { session } } = await getDb().auth.getSession();
   if (!session) await getDb().auth.signInAnonymously();

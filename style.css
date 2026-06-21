@@ -603,3 +603,59 @@ footer a { color: var(--text-muted); }
   .pet-detail-card { page-break-inside: avoid; }
   #map { height: 400px; }
 }
+
+/* ── Tips & Checklists (information board) ────────────── */
+.board-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+.board-tab {
+  padding: 0.6rem 1.2rem; border: 2px solid var(--border); border-radius: 999px;
+  background: var(--bg); font-family: inherit; font-size: 0.95rem; font-weight: 700;
+  color: var(--text-muted); cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.board-tab:hover { border-color: var(--blue); }
+.board-tab.active { background: var(--blue); color: white; border-color: var(--blue); }
+
+.board-panel[hidden] { display: none; }
+.board-panel > h3 { font-size: 1.15rem; font-weight: 800; color: var(--blue-dark); margin-bottom: 1rem; }
+
+.check-list { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.75rem; }
+.check-list li { background: var(--bg); border-radius: 9px; border-left: 4px solid var(--blue); }
+.check-list label {
+  display: flex; align-items: flex-start; gap: 0.7rem;
+  padding: 0.85rem 1rem; cursor: pointer; font-size: 0.95rem; line-height: 1.5;
+}
+.check-list input[type="checkbox"] {
+  width: 1.25rem; height: 1.25rem; margin-top: 0.1rem; flex-shrink: 0;
+  accent-color: var(--orange); cursor: pointer;
+}
+.check-list input[type="checkbox"]:checked + span { color: var(--text-muted); text-decoration: line-through; }
+.check-progress { font-weight: 800; color: var(--blue-dark); font-size: 0.95rem; margin-bottom: 0.5rem; }
+
+.share-tool { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border); }
+.share-tool h3 { font-size: 1.1rem; font-weight: 800; color: var(--blue-dark); margin-bottom: 0.3rem; }
+.share-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+.share-row select {
+  flex: 1; min-width: 200px; padding: 0.7rem 0.9rem;
+  border: 2px solid var(--border); border-radius: 9px;
+  font-family: inherit; font-size: 0.95rem; color: var(--text); background: var(--bg);
+}
+.share-row select:focus { outline: none; border-color: var(--blue); }
+.share-row .btn-primary { width: auto; padding: 0.7rem 1.4rem; }
+
+.tip-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 0.5rem; }
+.tip-card {
+  background: var(--bg); border-radius: 10px; padding: 1.25rem 1.1rem;
+  border-top: 4px solid var(--orange); text-align: center;
+}
+.tip-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+.tip-card h4 { font-size: 1rem; font-weight: 800; color: var(--blue-dark); margin-bottom: 0.4rem; }
+.tip-card p  { font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; }
+
+.identify-quiz { margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border); }
+.identify-quiz h3 { font-size: 1.1rem; font-weight: 800; color: var(--blue-dark); margin-bottom: 0.3rem; }
+.identify-result {
+  background: var(--green-light); color: var(--green);
+  border: 2px solid var(--green-border); border-radius: 10px;
+  padding: 1rem 1.25rem; margin-top: 0.75rem; font-size: 0.95rem; line-height: 1.55;
+}
+.identify-result .btn-primary { display: inline-block; margin-top: 0.75rem; }
